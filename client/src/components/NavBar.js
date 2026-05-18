@@ -64,6 +64,9 @@ export default function NavBar() {
               <Link href="/admin/groups" style={{ ...navLinkStyle("/admin/groups"), color: isActive("/admin/groups") ? "#f08c00" : "#868e96" }}>
                 Groups ✦
               </Link>
+              <Link href="/admin/users" style={{ ...navLinkStyle("/admin/users"), color: isActive("/admin/users") ? "#f08c00" : "#868e96" }}>
+                Users ✦
+              </Link>
             </>
           )}
         </div>

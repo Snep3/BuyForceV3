@@ -4,6 +4,8 @@ dotenv.config();
 
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import { User } from './users/user.entity';
 import { Product } from './products/product.entity';
@@ -37,6 +39,15 @@ const AppDataSource = new DataSource({
     ],
 });
 
+function loadJson<T>(filename: string): T[] {
+    const filePath = path.join(process.cwd(), filename);
+    if (!fs.existsSync(filePath)) {
+        console.warn(`⚠️  ${filename} not found, skipping.`);
+        return [];
+    }
+    return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as T[];
+}
+
 async function seed() {
     await AppDataSource.initialize();
 
@@ -57,16 +68,10 @@ async function seed() {
     const userRepo = AppDataSource.getRepository(User);
     const productRepo = AppDataSource.getRepository(Product);
     const groupRepo = AppDataSource.getRepository(Group);
-    const groupMemberRepo = AppDataSource.getRepository(GroupMember);
-    const orderRepo = AppDataSource.getRepository(Order);
-    const orderItemRepo = AppDataSource.getRepository(OrderItem);
-    const commentRepo = AppDataSource.getRepository(Comment);
-    const notificationRepo = AppDataSource.getRepository(Notification);
-    const wishlistRepo = AppDataSource.getRepository(WishlistItem);
 
-    // === 1) Users ===
+    // === 1) Users (default accounts) ===
     const pass123 = await bcrypt.hash('123456', 10);
-    const [admin, user1, user2] = await userRepo.save([
+    await userRepo.save([
         userRepo.create({
             email: 'admin1@test.com',
             password: pass123,
@@ -96,131 +101,61 @@ async function seed() {
         }),
     ]);
 
-    // === 2) Products ===
-    const [p1, p2, p3] = await productRepo.save([
-        productRepo.create({
-            name: 'Smart Watch V2',
-            price: 899,
-            category: 'gadgets',
-            stock: 50,
-            description: 'Smart watch with great battery life',
-            imageUrl: 'https://picsum.photos/seed/buyforce-watch/800/600',
-        }),
-        productRepo.create({
-            name: 'Gaming Laptop RTX 4070',
-            price: 8800,
-            category: 'laptops',
-            stock: 10,
-            description: 'High performance gaming laptop',
-            imageUrl: 'https://picsum.photos/seed/buyforce-laptop/800/600',
-        }),
-        productRepo.create({
-            name: 'ANC Headphones Pro',
-            price: 1400,
-            category: 'headphones',
-            stock: 40,
-            description: 'Noise cancelling headphones',
-            imageUrl: 'https://picsum.photos/seed/buyforce-headphones/800/600',
-        }),
-    ]);
+    // === 2) Products (from products.seed.json) ===
+    const productsData = loadJson<{
+        id: string;
+        name: string;
+        price: number | string;
+        category: string;
+        stock: number;
+        description?: string | null;
+        imageUrl?: string | null;
+    }>('products.seed.json');
 
-    // === 3) Groups ===
-    const now = new Date();
-    const in3days = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-    const in7days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    for (const p of productsData) {
+        await productRepo.save(
+            productRepo.create({
+                id: p.id,
+                name: p.name,
+                price: Number(p.price),
+                category: p.category,
+                stock: p.stock ?? 0,
+                description: p.description ?? null,
+                imageUrl: p.imageUrl ?? null,
+            }),
+        );
+    }
+    console.log(`✅ Inserted ${productsData.length} products`);
 
-    const [g1, g2, g3] = await groupRepo.save([
-        groupRepo.create({
-            name: 'Watch Deal Group',
-            description: 'Group buy for Smart Watch',
-            minParticipants: 5,
-            isActive: true,
-            isCompleted: false,
-            productId: p1.id,
-            deadline: in7days,
-        }),
-        groupRepo.create({
-            name: 'Laptop Deal Group',
-            description: 'Group buy for Gaming Laptop',
-            minParticipants: 3,
-            isActive: true,
-            isCompleted: false,
-            productId: p2.id,
-            deadline: in3days,
-        }),
-        groupRepo.create({
-            name: 'Headphones Deal Group',
-            description: 'Group buy for ANC Headphones',
-            minParticipants: 4,
-            isActive: false,
-            isCompleted: true,
-            completedAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),
-            productId: p3.id,
-            deadline: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
-        }),
-    ]);
+    // === 3) Groups (from groups.seed.json) ===
+    const groupsData = loadJson<{
+        id: string;
+        name: string;
+        description?: string | null;
+        minParticipants: number;
+        isActive: boolean;
+        isCompleted: boolean;
+        productId?: string | null;
+        deadline?: string | null;
+        discountPercent?: number;
+    }>('groups.seed.json');
 
-    // === 4) Group Members ===
-    await groupMemberRepo.save([
-        groupMemberRepo.create({ groupId: g1.id, userId: admin.id, quantity: 1 }),
-        groupMemberRepo.create({ groupId: g1.id, userId: user1.id, quantity: 1 }),
-        groupMemberRepo.create({ groupId: g1.id, userId: user2.id, quantity: 2 }),
-        groupMemberRepo.create({ groupId: g2.id, userId: user1.id, quantity: 1 }),
-        groupMemberRepo.create({ groupId: g3.id, userId: admin.id, quantity: 1 }),
-    ]);
-
-    // === 5) Comments ===
-    await commentRepo.save([
-        commentRepo.create({ content: 'Great deal!', user: user1, productId: p1.id }),
-        commentRepo.create({ content: 'Warranty?', user: user2, productId: p2.id }),
-    ]);
-
-    // === 6) Wishlist (FIXED) ===
-    // שימוש ב-Relations במקום ב-IDs פותר את שגיאות ה-TypeScript ב-create
-    await wishlistRepo.save([
-        wishlistRepo.create({
-            user: user2,
-            group: g1
-        }),
-        wishlistRepo.create({
-            user: user1,
-            product: p1
-        }),
-        wishlistRepo.create({
-            user: admin,
-            product: p2
-        })
-    ]);
-
-    // === 7) Notifications ===
-    await notificationRepo.save([
-        notificationRepo.create({
-            user: user1,
-            type: 'GROUP_JOINED',
-            message: `You joined ${g1.name}`,
-            isRead: false,
-        }),
-    ]);
-
-    // === 8) Orders ===
-    const order1 = await orderRepo.save(
-        orderRepo.create({
-            userId: user1.id,
-            groupId: g1.id,
-            status: 'pending',
-            totalPrice: String(p1.price),
-        }),
-    );
-
-    await orderItemRepo.save([
-        orderItemRepo.create({
-            orderId: order1.id,
-            productId: p1.id,
-            quantity: 1,
-            unitPrice: String(p1.price),
-            totalPrice: String(p1.price),
-        }),
-    ]);
+    for (const g of groupsData) {
+        await groupRepo.save(
+            groupRepo.create({
+                id: g.id,
+                name: g.name,
+                description: g.description ?? null,
+                minParticipants: g.minParticipants,
+                isActive: g.isActive,
+                isCompleted: g.isCompleted,
+                productId: g.productId ?? null,
+                deadline: g.deadline ? new Date(g.deadline) : null,
+                discountPercent: g.discountPercent ?? 0,
+            }),
+        );
+    }
+    console.log(`✅ Inserted ${groupsData.length} groups`);
 
     console.log('✅ Seed completed');
     await AppDataSource.destroy();

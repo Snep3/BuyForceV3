@@ -15,6 +15,10 @@ import { UpdateGroupDto } from './dto/update-group.dto';
 import { OrdersService } from '../orders/orders.service';
 import { Order } from '../orders/order.entity';
 import { NotificationsService } from 'src/notifications/notifications.service';
+import * as fs from 'fs';
+import * as path from 'path';
+
+const GROUPS_SEED_FILE = path.join(process.cwd(), 'groups.seed.json');
 
 @Injectable()
 export class GroupsService {
@@ -385,7 +389,9 @@ async getGroupById(id: string) {
 
     if (dto.description !== undefined) group.description = dto.description;
 
-    return this.groupRepo.save(group);
+    const saved = await this.groupRepo.save(group);
+    void this.syncGroupsSeedFile();
+    return saved;
   }
 
   async update(id: string, dto: UpdateGroupDto) {
@@ -413,7 +419,9 @@ async getGroupById(id: string) {
       group.productId = product.id;
     }
 
-    return this.groupRepo.save(group);
+    const saved = await this.groupRepo.save(group);
+    void this.syncGroupsSeedFile();
+    return saved;
   }
 
   async remove(id: string) {
@@ -421,6 +429,23 @@ async getGroupById(id: string) {
     if (!group) throw new NotFoundException('Group not found');
 
     await this.groupRepo.remove(group);
+    void this.syncGroupsSeedFile();
     return { success: true };
+  }
+
+  private async syncGroupsSeedFile(): Promise<void> {
+    const groups = await this.groupRepo.find();
+    const data = groups.map((g) => ({
+      id: g.id,
+      name: g.name,
+      description: g.description ?? null,
+      minParticipants: g.minParticipants,
+      isActive: g.isActive,
+      isCompleted: g.isCompleted,
+      productId: g.productId ?? null,
+      deadline: g.deadline ?? null,
+      discountPercent: Number(g.discountPercent ?? 0),
+    }));
+    fs.writeFileSync(GROUPS_SEED_FILE, JSON.stringify(data, null, 2), 'utf-8');
   }
 }

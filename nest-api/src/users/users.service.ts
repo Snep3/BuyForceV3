@@ -94,6 +94,14 @@ export class UsersService {
     return safe;
   }
 
+  async findAll() {
+    const users = await this.userRepo.find({
+      select: ['id', 'username', 'email', 'is_admin', 'createdAt'],
+      order: { createdAt: 'DESC' },
+    });
+    return users;
+  }
+
   private signToken(id: string, is_admin: boolean) {
     const secret = process.env.JWT_SECRET;
     if (!secret) throw new Error('JWT_SECRET not set');

@@ -1,8 +1,9 @@
 // src/orders/orders.controller.ts
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AdminGuard } from '../auth/admin.guard';
 
 @Controller('api/orders')
 @UseGuards(JwtAuthGuard)
@@ -19,6 +20,12 @@ export class OrdersController {
   async getMyOrders(@Req() req) {
     const userId = req.user?.userId;
     return this.ordersService.getMyOrders(userId);
+  }
+
+  @Get('user/:userId')
+  @UseGuards(AdminGuard)
+  async getOrdersByUser(@Param('userId') userId: string) {
+    return this.ordersService.getOrdersForUser(userId);
   }
 
   // 🔹 "הקבוצות שלי" – מחזיר קבוצות שהמשתמש חלק מהן

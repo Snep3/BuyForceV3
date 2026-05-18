@@ -149,7 +149,8 @@ export default function AdminGroupsPage() {
           </span>
           <span style={{ background: "#f08c00", color: "#fff", padding: "3px 10px", borderRadius: "6px", fontSize: "0.7rem", fontWeight: "900", letterSpacing: "1px" }}>ADMIN</span>
           <span style={{ color: "#909296", fontSize: "0.9rem", marginLeft: "8px" }}>/ Groups</span>
-          <div style={{ marginLeft: "auto", display: "flex", gap: "12px" }}>
+          <div style={{ marginLeft: "auto", display: "flex", gap: "20px" }}>
+            <a href="/admin/users" style={{ color: "#909296", fontSize: "0.85rem", textDecoration: "none" }}>Users</a>
             <a href="/admin/products" style={{ color: "#909296", fontSize: "0.85rem", textDecoration: "none" }}>Products</a>
             <a href="/" style={{ color: "#909296", fontSize: "0.85rem", textDecoration: "none" }}>Home</a>
           </div>

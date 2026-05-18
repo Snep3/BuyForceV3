@@ -2,6 +2,7 @@
 import { Body, Controller, Get, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AdminGuard } from '../auth/admin.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
 
@@ -19,6 +20,12 @@ export class UsersController {
   @Post('login')
   async login(@Body() body: { email: string; password: string }) {
     return this.usersService.login(body.email, body.password);
+  }
+
+  @Get('all')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  async findAll() {
+    return this.usersService.findAll();
   }
 
   @Get('me')
