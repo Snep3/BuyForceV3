@@ -1,0 +1,20 @@
+[
+  {
+    "id": "0d97770b-e5e4-423e-b7d1-053aebacd2f0",
+    "name": "big_TV",
+    "price": "1500",
+    "category": "Electronics",
+    "stock": 10,
+    "description": "Electronic TV",
+    "imageUrl": null
+  },
+  {
+    "id": "9d6c2b9b-eece-4020-be56-a528f179cb45",
+    "name": "asd",
+    "price": "12200000",
+    "category": "food",
+    "stock": 12,
+    "description": "testins",
+    "imageUrl": "https://picsum.photos/seed/tv/600/400"
+  }
+]

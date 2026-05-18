@@ -16,7 +16,7 @@ export default function ProductsPage() {
   const [imgErrors, setImgErrors] = useState({});
 
   useEffect(() => {
-    (async () => {
+    const fetchProducts = async () => {
       try {
         const res = await http.get("/api/products");
         setItems(Array.isArray(res.data) ? res.data : []);
@@ -26,7 +26,14 @@ export default function ProductsPage() {
       } finally {
         setLoading(false);
       }
-    })();
+    };
+
+    fetchProducts();
+
+    // Re-fetches in the background every 30s so new products appear without a manual refresh.
+    // Existing products stay on screen — no flicker or loading state.
+    const interval = setInterval(fetchProducts, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const filtered = items.filter(

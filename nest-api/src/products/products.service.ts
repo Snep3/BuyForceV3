@@ -6,6 +6,10 @@ import { Product } from './product.entity';
 import { Comment } from './comment.entity';
 import { User } from '../users/user.entity';
 import { AddCommentDto } from './dto/add-comment.dto';
+import * as fs from 'fs';
+import * as path from 'path';
+
+const SEED_FILE = path.join(process.cwd(), 'products.seed.json');
 
 interface CreateProductDtoLike {
   name: string;
@@ -79,7 +83,9 @@ export class ProductsService {
       imageUrl: dto.imageUrl ?? null, // ✅ חדש
     });
 
-    return this.productRepo.save(product);
+    const saved = await this.productRepo.save(product);
+    void this.syncSeedFile();
+    return saved;
   }
 
   // alias: create – אם יש שימושים אחרים בקוד
@@ -117,7 +123,9 @@ export class ProductsService {
       product.imageUrl = trimmed ? trimmed : null;
     }
 
-    return this.productRepo.save(product);
+    const saved = await this.productRepo.save(product);
+    void this.syncSeedFile();
+    return saved;
   }
 
   // alias: update – אם יש שימושים אחרים בקוד
@@ -129,11 +137,26 @@ export class ProductsService {
   async deleteProduct(id: string): Promise<void> {
     const product = await this.findOne(id);
     await this.productRepo.remove(product);
+    void this.syncSeedFile();
   }
 
   // alias: remove – אם יש שימושים אחרים בקוד
   async remove(id: string): Promise<void> {
     return this.deleteProduct(id);
+  }
+
+  private async syncSeedFile(): Promise<void> {
+    const products = await this.productRepo.find();
+    const lines = products.map((p) => ({
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      category: p.category,
+      stock: p.stock,
+      description: p.description ?? null,
+      imageUrl: p.imageUrl ?? null,
+    }));
+    fs.writeFileSync(SEED_FILE, JSON.stringify(lines, null, 2), 'utf-8');
   }
 
   // ========= תגובות מוצר =========
