@@ -106,15 +106,18 @@ In development mode TypeORM automatically syncs the database schema — no manua
 
 ### 4. Web Frontend (Next.js)
 
-#### Create the env file (optional)
+#### Create the env file
 
-By default the frontend points to `http://localhost:4000`. If your API runs elsewhere, create `client/.env.local`:
+Create `client/.env.local` — **this file is gitignored and must be created manually on each machine**.
+
+Add the following line inside `client/.env.local`:
 
 ```env
-NEXT_PUBLIC_API_URL=https://your-deployed-api.com
+NEXT_PUBLIC_API_URL=https://buyforce-class-ready.onrender.com
 ```
 
-If this file doesn't exist, `http://localhost:4000` is used automatically.
+This points the frontend at the deployed API (hosted on Render, connected to Neon PostgreSQL).
+If this file doesn't exist, the frontend falls back to `http://localhost:4000` (local backend only).
 
 #### Install and run
 
