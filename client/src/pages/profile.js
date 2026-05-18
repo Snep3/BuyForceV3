@@ -8,27 +8,19 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [isEditing, setIsEditing] = useState(false);
-
   const [profile, setProfile] = useState(null);
-  const [myGroups, setMyGroups] = useState([]); // נתונים שקיימים ב-Backend
-  const [form, setForm] = useState({
-    fullName: "",
-    phone: "",
-    address: "",
-    avatarUrl: "",
-  });
+  const [myGroups, setMyGroups] = useState([]);
+  const [form, setForm] = useState({ fullName: "", phone: "", address: "", avatarUrl: "" });
 
   async function loadData() {
     try {
       setError("");
-      // טעינת פרופיל וקבוצות במקביל
       const [userRes, groupsRes] = await Promise.all([
         http.get("/api/users/me"),
-        http.get("/api/groups/my") // משתמש ב-getUserGroups הקיים שלך
+        http.get("/api/groups/my"),
       ]);
-
       setProfile(userRes.data);
-      setMyGroups(groupsRes.data);
+      setMyGroups(groupsRes.data || []);
       setForm({
         fullName: userRes.data.fullName || "",
         phone: userRes.data.phone || "",
@@ -36,7 +28,6 @@ export default function ProfilePage() {
         avatarUrl: userRes.data.avatarUrl || "",
       });
     } catch (e) {
-      console.error(e);
       if (e?.response?.status === 401) router.replace("/login");
       setError("Failed to load profile data");
     } finally {
@@ -44,9 +35,7 @@ export default function ProfilePage() {
     }
   }
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   async function save(e) {
     e.preventDefault();
@@ -55,7 +44,6 @@ export default function ProfilePage() {
       const res = await http.patch("/api/users/me", form);
       setProfile(res.data);
       setIsEditing(false);
-      // עדכון ה-localStorage כפי שעשית קודם
       if (typeof window !== "undefined") {
         const raw = localStorage.getItem("user");
         const current = raw ? JSON.parse(raw) : {};
@@ -68,124 +56,145 @@ export default function ProfilePage() {
     }
   }
 
-  if (loading) return <div style={centerStyle}>Loading Profile...</div>;
+  if (loading) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", fontSize: "1.1rem", color: "#868e96" }}>
+        Loading profile...
+      </div>
+    );
+  }
+
+  const initials = (profile?.fullName || profile?.username || "U").slice(0, 2).toUpperCase();
+  const activeGroups = myGroups.filter((g) => !g.isCompleted).length;
+  const completedGroups = myGroups.filter((g) => g.isCompleted).length;
 
   return (
-    <main style={pageContainer}>
-      {/* כרטיס פרופיל עליון */}
-      <section style={profileCard}>
-        <div style={coverPhoto}></div>
-        <div style={profileHeader}>
-          <img 
-            src={profile?.avatarUrl || "https://ui-avatars.com/api/?name=" + (profile?.fullName || "User")} 
-            style={avatarLarge} 
-            alt="Avatar" 
-          />
-          <div style={headerText}>
-            <h1 style={userName}>{profile?.fullName || profile?.username}</h1>
-            <p style={userEmail}>{profile?.email} • Member since {new Date(profile?.createdAt).getFullYear()}</p>
-          </div>
-          <button onClick={() => setIsEditing(!isEditing)} style={editToggleBtn}>
-            {isEditing ? "View Profile" : "Edit Profile"}
-          </button>
-        </div>
+    <div style={{ minHeight: "100vh", backgroundColor: "#f4f7f6", direction: "ltr" }}>
+      <main style={{ maxWidth: "900px", margin: "0 auto", padding: "40px 20px" }}>
 
-        {isEditing ? (
-          <form onSubmit={save} style={editForm}>
-            <div style={inputGroup}>
-              <label>Full Name</label>
-              <input value={form.fullName} onChange={e => setForm({...form, fullName: e.target.value})} style={inputStyle} />
+        {error && (
+          <div style={{ background: "#fff5f5", border: "1px solid #ffa8a8", color: "#fa5252", padding: "12px 16px", borderRadius: "10px", marginBottom: "20px", textAlign: "center" }}>
+            {error}
+          </div>
+        )}
+
+        {/* Profile Card */}
+        <section style={{ backgroundColor: "#fff", borderRadius: "20px", boxShadow: "0 4px 24px rgba(0,0,0,0.07)", overflow: "hidden", marginBottom: "28px" }}>
+          {/* Cover */}
+          <div style={{ height: "140px", background: "linear-gradient(135deg, #228be6 0%, #15aabf 100%)", position: "relative" }}>
+            <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.12) 0%, transparent 60%)" }} />
+          </div>
+
+          {/* Header */}
+          <div style={{ padding: "0 32px 28px", marginTop: "-60px", display: "flex", alignItems: "flex-end", gap: "20px", flexWrap: "wrap" }}>
+            <div style={{ width: 110, height: 110, borderRadius: "50%", border: "5px solid #fff", backgroundColor: "#228be6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
+              {profile?.avatarUrl ? (
+                <img src={profile.avatarUrl} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <span style={{ fontSize: "2rem", fontWeight: "900", color: "#fff" }}>{initials}</span>
+              )}
             </div>
-            <div style={inputGroup}>
-              <label>Phone</label>
-              <input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} style={inputStyle} />
+            <div style={{ flex: 1, minWidth: "200px", paddingBottom: "4px" }}>
+              <h1 style={{ margin: 0, fontSize: "1.8rem", fontWeight: "900", color: "#1a1a1a" }}>
+                {profile?.fullName || profile?.username || "User"}
+              </h1>
+              <p style={{ margin: "4px 0 0", color: "#868e96", fontSize: "0.95rem" }}>
+                {profile?.email} · Member since {new Date(profile?.createdAt).getFullYear()}
+              </p>
             </div>
-            <div style={inputGroup}>
-              <label>Address</label>
-              <input value={form.address} onChange={e => setForm({...form, address: e.target.value})} style={inputStyle} />
-            </div>
-            <div style={inputGroup}>
-              <label>Avatar URL</label>
-              <input value={form.avatarUrl} onChange={e => setForm({...form, avatarUrl: e.target.value})} style={inputStyle} />
-            </div>
-            <button type="submit" disabled={saving} style={saveBtn}>
-              {saving ? "Saving..." : "Save Changes"}
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              style={{ padding: "10px 22px", borderRadius: "10px", border: "1.5px solid #dee2e6", backgroundColor: "#fff", cursor: "pointer", fontWeight: "700", fontSize: "0.9rem", color: "#228be6", flexShrink: 0 }}
+            >
+              {isEditing ? "Cancel" : "Edit Profile"}
             </button>
-          </form>
-        ) : (
-          <div style={statsContainer}>
-            <div style={statBox}>
-              <span style={statNumber}>{myGroups.length}</span>
-              <span style={statLabel}>Groups Joined</span>
-            </div>
-            <div style={statBox}>
-              <span style={statNumber}>{myGroups.filter(g => g.isCompleted).length}</span>
-              <span style={statLabel}>Success Purchases</span>
-            </div>
           </div>
-        )}
-      </section>
 
-      {/* רשימת הקבוצות שלי */}
-      <section style={groupsSection}>
-        <h2 style={sectionTitle}>My Groups Activity</h2>
-        {myGroups.length === 0 ? (
-          <p style={emptyText}>You haven't joined any groups yet.</p>
-        ) : (
-          <div style={groupsGrid}>
-            {myGroups.map(group => (
-              <div key={group.id} style={groupSmallCard}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <b style={groupName}>{group.name}</b>
-                  <span style={groupStatus(group.isCompleted)}>
-                    {group.isCompleted ? "Completed" : "Active"}
-                  </span>
+          {/* Stats */}
+          {!isEditing && (
+            <div style={{ display: "flex", gap: "0", borderTop: "1px solid #f0f0f0" }}>
+              {[
+                { label: "Groups Joined", value: myGroups.length },
+                { label: "Active Groups", value: activeGroups },
+                { label: "Completed", value: completedGroups },
+              ].map((stat, i) => (
+                <div key={i} style={{ flex: 1, padding: "20px", textAlign: "center", borderRight: i < 2 ? "1px solid #f0f0f0" : "none" }}>
+                  <div style={{ fontSize: "2rem", fontWeight: "900", color: "#228be6" }}>{stat.value}</div>
+                  <div style={{ fontSize: "0.8rem", color: "#868e96", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.5px", marginTop: "4px" }}>{stat.label}</div>
                 </div>
-                <div style={progressContainer}>
-                  <div style={progressBar(group.progress)}></div>
+              ))}
+            </div>
+          )}
+
+          {/* Edit Form */}
+          {isEditing && (
+            <form onSubmit={save} style={{ padding: "24px 32px 32px", borderTop: "1px solid #f0f0f0", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              {[
+                { label: "Full Name", key: "fullName", placeholder: "Your full name" },
+                { label: "Phone", key: "phone", placeholder: "+1 234 567 8900" },
+                { label: "Address", key: "address", placeholder: "Your address" },
+                { label: "Avatar URL", key: "avatarUrl", placeholder: "https://example.com/avatar.jpg" },
+              ].map(({ label, key, placeholder }) => (
+                <div key={key} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.78rem", fontWeight: "800", color: "#868e96", textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</label>
+                  <input
+                    value={form[key]}
+                    onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                    placeholder={placeholder}
+                    style={{ padding: "10px 14px", border: "1.5px solid #dee2e6", borderRadius: "10px", fontSize: "0.95rem", outline: "none", transition: "border-color 0.2s" }}
+                    onFocus={(e) => (e.target.style.borderColor = "#228be6")}
+                    onBlur={(e) => (e.target.style.borderColor = "#dee2e6")}
+                  />
                 </div>
-                <div style={groupFooter}>
-                  <span>{group.currentParticipants}/{group.minParticipants} Users</span>
-                  <span>{group.progress}%</span>
-                </div>
+              ))}
+              <div style={{ gridColumn: "1 / -1", marginTop: "8px" }}>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  style={{ width: "100%", padding: "13px", background: "#228be6", color: "#fff", border: "none", borderRadius: "10px", fontWeight: "800", fontSize: "1rem", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}
+                >
+                  {saving ? "Saving..." : "Save Changes"}
+                </button>
               </div>
-            ))}
-          </div>
-        )}
-      </section>
-    </main>
+            </form>
+          )}
+        </section>
+
+        {/* My Groups */}
+        <section>
+          <h2 style={{ fontSize: "1.3rem", fontWeight: "900", color: "#1a1a1a", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "20px", borderBottom: "2px solid #000", paddingBottom: "10px" }}>
+            My Groups Activity
+          </h2>
+          {myGroups.length === 0 ? (
+            <p style={{ color: "#adb5bd", fontStyle: "italic", textAlign: "center", padding: "40px" }}>
+              You haven't joined any groups yet.
+            </p>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
+              {myGroups.map((group) => {
+                const progress = group.progress ?? 0;
+                return (
+                  <div key={group.id} style={{ backgroundColor: "#fff", padding: "18px", borderRadius: "14px", border: "1px solid #f0f0f0", boxShadow: "0 2px 10px rgba(0,0,0,0.04)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
+                      <span style={{ fontWeight: "800", fontSize: "0.95rem", color: "#1a1a1a", lineHeight: "1.3" }}>{group.name}</span>
+                      <span style={{ fontSize: "0.7rem", fontWeight: "800", padding: "3px 8px", borderRadius: "6px", whiteSpace: "nowrap", marginLeft: "8px", background: group.isCompleted ? "#ebfbee" : "#e7f5ff", color: group.isCompleted ? "#2f9e44" : "#228be6" }}>
+                        {group.isCompleted ? "Completed" : "Active"}
+                      </span>
+                    </div>
+                    <div style={{ height: "8px", backgroundColor: "#f1f3f5", borderRadius: "4px", overflow: "hidden", marginBottom: "8px" }}>
+                      <div style={{ width: `${Math.min(progress, 100)}%`, height: "100%", backgroundColor: group.isCompleted ? "#20c997" : "#228be6", borderRadius: "4px", transition: "width 0.4s ease" }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#868e96" }}>
+                      <span>{group.currentParticipants}/{group.minParticipants} members</span>
+                      <span style={{ fontWeight: "700", color: group.isCompleted ? "#20c997" : "#228be6" }}>{progress}%</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </main>
+    </div>
   );
 }
-
-// --- Styles (CSS-in-JS) ---
-const pageContainer = { maxWidth: '900px', margin: '0 auto', padding: '40px 20px', fontFamily: 'system-ui, sans-serif', backgroundColor: '#fcfcfc' };
-const profileCard = { backgroundColor: '#fff', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', overflow: 'hidden', marginBottom: '30px' };
-const coverPhoto = { height: '120px', background: 'linear-gradient(90deg, #228be6 0%, #15aabf 100%)' };
-const profileHeader = { padding: '0 30px 30px', marginTop: '-50px', display: 'flex', alignItems: 'flex-end', gap: '20px', flexWrap: 'wrap' };
-const avatarLarge = { width: '120px', height: '120px', borderRadius: '50%', border: '5px solid #fff', backgroundColor: '#eee', objectFit: 'cover' };
-const headerText = { flex: 1, minWidth: '200px' };
-const userName = { margin: 0, fontSize: '28px', color: '#1a1b1e' };
-const userEmail = { margin: '5px 0 0', color: '#868e96' };
-const editToggleBtn = { padding: '10px 20px', borderRadius: '8px', border: '1px solid #ced4da', backgroundColor: '#fff', cursor: 'pointer', fontWeight: '600' };
-
-const statsContainer = { display: 'flex', gap: '40px', padding: '0 30px 30px', justifyContent: 'flex-start' };
-const statBox = { display: 'flex', flexDirection: 'column' };
-const statNumber = { fontSize: '24px', fontWeight: 'bold', color: '#228be6' };
-const statLabel = { fontSize: '13px', color: '#868e96', textTransform: 'uppercase' };
-
-const editForm = { padding: '30px', display: 'grid', gap: '15px', borderTop: '1px solid #eee' };
-const inputGroup = { display: 'flex', flexDirection: 'column', gap: '5px' };
-const inputStyle = { padding: '10px', borderRadius: '6px', border: '1px solid #ced4da', fontSize: '16px' };
-const saveBtn = { padding: '12px', backgroundColor: '#228be6', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', marginTop: '10px' };
-
-const groupsSection = { marginTop: '40px' };
-const sectionTitle = { fontSize: '20px', marginBottom: '20px', color: '#343a40' };
-const groupsGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' };
-const groupSmallCard = { backgroundColor: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #eee', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' };
-const groupName = { fontSize: '16px', color: '#2c2e33' };
-const groupStatus = (isDone) => ({ fontSize: '11px', padding: '3px 8px', borderRadius: '10px', backgroundColor: isDone ? '#ebfbee' : '#e7f5ff', color: isDone ? '#2f9e44' : '#228be6', fontWeight: 'bold' });
-const progressContainer = { height: '8px', backgroundColor: '#f1f3f5', borderRadius: '4px', margin: '15px 0 8px', overflow: 'hidden' };
-const progressBar = (p) => ({ width: p + '%', height: '100%', backgroundColor: '#228be6', transition: 'width 0.3s ease' });
-const groupFooter = { display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#868e96' };
-const emptyText = { color: '#adb5bd', fontStyle: 'italic' };
-const centerStyle = { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontSize: '18px', color: '#868e96' };

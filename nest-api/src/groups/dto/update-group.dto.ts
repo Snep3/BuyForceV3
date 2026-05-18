@@ -2,12 +2,15 @@
 import {
   IsBoolean,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
   Min,
+  Max,
   IsDateString
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class UpdateGroupDto {
   @IsOptional()
@@ -35,4 +38,10 @@ export class UpdateGroupDto {
   @IsDateString()
   deadline?: string;
 
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  discountPercent?: number;
 }

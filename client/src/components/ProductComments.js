@@ -1,209 +1,216 @@
-// client/src/components/ProductComments.js
 import { useEffect, useState } from "react";
-import axios from "axios";
-import { API_URL } from "../config/api";
+import { http } from "../config/http";
 import { useRouter } from "next/router";
 
-// רכיב להצגת תגובות על מוצר והוספת תגובות חדשות
 export default function ProductComments({ productId }) {
   const router = useRouter();
-// מצב מקומי לרכיב
   const [comments, setComments] = useState([]);
-  // תוכן התגובה החדשה
   const [content, setContent] = useState("");
-// מצבים לטעינה ושגיאות
   const [loadingList, setLoadingList] = useState(false);
-  // מצב לטעינת הוספת תגובה
   const [loadingAdd, setLoadingAdd] = useState(false);
-  // מצב לשגיאות
   const [error, setError] = useState("");
 
-  // טעינת תגובות למוצר
   useEffect(() => {
-    async function fetchComments() {
+    if (!productId) return;
+    (async () => {
       try {
         setLoadingList(true);
         setError("");
-        const res = await axios.get(
-          `${API_URL}/api/products/${productId}/comments`
-        );
+        const res = await http.get(`/api/products/${productId}/comments`);
         setComments(Array.isArray(res.data) ? res.data : []);
-      } catch (err) {
-        console.error(err);
-        setError("שגיאה בטעינת תגובות");
+      } catch {
+        setError("Failed to load comments");
       } finally {
         setLoadingList(false);
       }
-    }
-
-    if (productId) {
-      fetchComments();
-    }
+    })();
   }, [productId]);
 
-  // הוספת תגובה חדשה
   async function handleAddComment(e) {
     e.preventDefault();
+    if (!content.trim()) return;
+
+    const token = localStorage.getItem("token");
+    if (!token) return router.push("/login");
+
+    setLoadingAdd(true);
     setError("");
-
-    if (!content.trim()) {
-      return;
-    }
-
     try {
-      const token =
-        typeof window !== "undefined"
-          ? localStorage.getItem("token")
-          : null;
-
-      if (!token) {
-        router.push("/login");
-        return;
-      }
-      // מתחילים בטעינת ההוספה
-      setLoadingAdd(true);
-   // שולחים את התגובה לשרת
-      const res = await axios.post(
-        `${API_URL}/api/products/${productId}/comments`,
-        { content: content.trim() },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const newComment = res.data;
-
-      // מוסיפים לראש הרשימה בלי ריענון מהשרת
-      setComments((prev) => [newComment, ...prev]);
+      const res = await http.post(`/api/products/${productId}/comments`, {
+        content: content.trim(),
+      });
+      setComments((prev) => [res.data, ...prev]);
       setContent("");
     } catch (err) {
-      console.error(err);
-      const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        "שגיאה בשליחת תגובה";
-      if (Array.isArray(msg)) {
-        setError(msg.join(" | "));
-      } else {
-        setError(String(msg));
-      }
+      const msg = err?.response?.data?.message || err?.response?.data?.error || "Failed to post comment";
+      setError(Array.isArray(msg) ? msg.join(" | ") : String(msg));
     } finally {
       setLoadingAdd(false);
     }
   }
 
-  // עיצוב תאריך לקריאה נוחה
+  function getUserLabel(comment) {
+    const u = comment.user;
+    if (!u) return "Anonymous";
+    return u.fullName || u.username || u.email || "User";
+  }
+
   function formatDate(value) {
     if (!value) return "";
     try {
-      return new Date(value).toLocaleString("he-IL");
+      return new Date(value).toLocaleDateString("en-GB", {
+        day: "numeric", month: "short", year: "numeric",
+      });
     } catch {
-      return String(value);
+      return "";
     }
   }
 
-  // קבלת תווית משתמש לתגובה
-  function getUserLabel(comment) {
-    const u = comment.user;
-    if (!u) return "משתמש";
-    return u.username || u.email || "משתמש";
-  }
-
-  // רינדור הרכיב
   return (
-    <section
-      style={{
-        marginTop: "2rem",
-        paddingTop: "1rem",
-        borderTop: "1px solid #ddd",
-      }}
-    >
-      <h2 style={{ marginBottom: "0.5rem" }}>תגובות על המוצר</h2>
-
-      {/* טופס להוספת תגובה */}
-      <form
-        onSubmit={handleAddComment}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.5rem",
-          maxWidth: "500px",
-          marginBottom: "1rem",
-        }}
-      >
-        <label>
-          הוסף תגובה:
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={3}
-            style={{ width: "100%", padding: "0.5rem", resize: "vertical" }}
-          />
-        </label>
-
-        {error && (
-          <div style={{ color: "red", fontSize: "0.9rem" }}>{error}</div>
+    <section>
+      <h2 style={sectionTitleStyle}>
+        Reviews &amp; Comments
+        {comments.length > 0 && (
+          <span style={countStyle}>{comments.length}</span>
         )}
+      </h2>
 
-        <button
-          type="submit"
-          disabled={loadingAdd}
-          style={{
-            alignSelf: "flex-start",
-            padding: "0.4rem 0.8rem",
-            cursor: "pointer",
-          }}
-        >
-          {loadingAdd ? "שולח..." : "שלח תגובה"}
+      {/* Add comment form */}
+      <form onSubmit={handleAddComment} style={formStyle}>
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="Share your thoughts about this product..."
+          rows={3}
+          style={textareaStyle}
+        />
+        {error && <div style={errorStyle}>{error}</div>}
+        <button type="submit" disabled={loadingAdd || !content.trim()} style={submitBtnStyle}>
+          {loadingAdd ? "Posting..." : "Post Comment"}
         </button>
       </form>
 
-      {/* רשימת תגובות */}
+      {/* Comments list */}
       {loadingList ? (
-        <p>טוען תגובות...</p>
+        <div style={loadingStyle}>Loading comments...</div>
       ) : comments.length === 0 ? (
-        <p>אין תגובות עדיין. תהיה הראשון להגיב.</p>
+        <div style={emptyStyle}>
+          <span style={{ fontSize: "2rem" }}>💬</span>
+          <p>No comments yet. Be the first to review!</p>
+        </div>
       ) : (
-        <ul
-          style={{
-            listStyle: "none",
-            padding: 0,
-            margin: 0,
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.75rem",
-          }}
-        >
-            // רינדור כל תגובה ברשימה
+        <div style={listStyle}>
           {comments.map((c) => (
-            <li
-              key={c.id}
-              style={{
-                border: "1px solid #eee",
-                borderRadius: "4px",
-                padding: "0.5rem 0.75rem",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "0.85rem",
-                  color: "#555",
-                  marginBottom: "0.25rem",
-                }}
-              >
-                // הצגת תווית המשתמש ותאריך התגובה
-                <strong>{getUserLabel(c)}</strong>{" "}
-                <span style={{ marginInlineStart: "0.5rem" }}>
-                  {formatDate(c.createdAt)}
-                </span>
+            <div key={c.id} style={commentStyle}>
+              <div style={commentHeaderStyle}>
+                <div style={avatarStyle}>
+                  {getUserLabel(c).charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div style={usernameStyle}>{getUserLabel(c)}</div>
+                  <div style={dateStyle}>{formatDate(c.createdAt)}</div>
+                </div>
               </div>
-              <div>{c.content}</div>
-            </li>
+              <p style={commentTextStyle}>{c.content}</p>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </section>
   );
 }
+
+const sectionTitleStyle = {
+  fontSize: "1.4rem",
+  fontWeight: "800",
+  color: "#111",
+  marginBottom: "1.5rem",
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
+};
+const countStyle = {
+  background: "#e7f5ff",
+  color: "#228be6",
+  fontSize: "0.85rem",
+  fontWeight: "700",
+  padding: "2px 10px",
+  borderRadius: "20px",
+};
+const formStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "0.75rem",
+  marginBottom: "2rem",
+  background: "#f8f9fa",
+  padding: "1.25rem",
+  borderRadius: "12px",
+  border: "1px solid #f0f0f0",
+};
+const textareaStyle = {
+  width: "100%",
+  padding: "0.75rem 1rem",
+  borderRadius: "10px",
+  border: "1.5px solid #dee2e6",
+  fontSize: "0.95rem",
+  resize: "vertical",
+  outline: "none",
+  fontFamily: "inherit",
+  lineHeight: 1.5,
+  transition: "border-color 0.2s",
+};
+const errorStyle = {
+  background: "#fff5f5",
+  color: "#c92a2a",
+  border: "1px solid #ffa8a8",
+  borderRadius: "8px",
+  padding: "0.6rem 0.9rem",
+  fontSize: "0.85rem",
+};
+const submitBtnStyle = {
+  alignSelf: "flex-end",
+  padding: "9px 22px",
+  background: "#228be6",
+  color: "#fff",
+  border: "none",
+  borderRadius: "8px",
+  fontWeight: "700",
+  fontSize: "0.9rem",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  transition: "background 0.2s, opacity 0.2s",
+};
+const loadingStyle = { textAlign: "center", color: "#868e96", padding: "2rem" };
+const emptyStyle = {
+  textAlign: "center",
+  color: "#868e96",
+  padding: "2rem",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  gap: "0.5rem",
+};
+const listStyle = { display: "flex", flexDirection: "column", gap: "1rem" };
+const commentStyle = {
+  background: "#f8f9fa",
+  borderRadius: "12px",
+  padding: "1rem 1.25rem",
+  border: "1px solid #f0f0f0",
+};
+const commentHeaderStyle = { display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.6rem" };
+const avatarStyle = {
+  width: "36px",
+  height: "36px",
+  borderRadius: "50%",
+  background: "linear-gradient(135deg, #228be6, #15aabf)",
+  color: "#fff",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontWeight: "800",
+  fontSize: "0.9rem",
+  flexShrink: 0,
+};
+const usernameStyle = { fontWeight: "700", fontSize: "0.9rem", color: "#212529" };
+const dateStyle = { fontSize: "0.78rem", color: "#adb5bd" };
+const commentTextStyle = { fontSize: "0.95rem", color: "#495057", lineHeight: 1.6, margin: 0 };

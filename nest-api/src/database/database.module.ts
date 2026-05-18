@@ -48,10 +48,7 @@ console.log('DB_DATABASE =', config.get('DB_DATABASE'));
             Notification,
           ],
 
-          // ✅ Neon מחייב SSL
-          ssl: {
-            rejectUnauthorized: false,
-          },
+          ssl: config.get('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false,
 
           // ✅ חשוב: בפרודקשן לא עושים synchronize אוטומטי
           synchronize: !isProd,

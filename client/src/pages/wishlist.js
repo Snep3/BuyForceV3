@@ -3,13 +3,13 @@ import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { API_URL } from "../config/api";
-import NavBar from "../components/NavBar";
 
 export default function WishlistPage() {
   const router = useRouter();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     fetchWishlist();
@@ -47,16 +47,35 @@ export default function WishlistPage() {
     }
   }
 
-  const wishlistProducts = items.filter(item => item.product || item.productId);
-  const wishlistGroups = items.filter(item => item.group || item.groupId);
+  const q = search.toLowerCase();
+  const wishlistProducts = items.filter(item => (item.product || item.productId) && (
+    !q || item.product?.name?.toLowerCase().includes(q) || item.product?.category?.toLowerCase().includes(q)
+  ));
+  const wishlistGroups = items.filter(item => (item.group || item.groupId) && (
+    !q || item.group?.name?.toLowerCase().includes(q) || item.group?.product?.name?.toLowerCase().includes(q)
+  ));
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#f4f7f6", direction: "ltr" }}>
+      {/* Banner */}
+      <div style={bannerStyle}>
+        <div style={bannerInnerStyle}>
+          <h1 style={bannerTitleStyle}>My Wishlist</h1>
+          <p style={bannerSubStyle}>Your saved products and group deals</p>
+          <div style={searchWrapStyle}>
+            <span style={searchIconStyle}>🔍</span>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search your wishlist..."
+              style={searchInputStyle}
+            />
+          </div>
+        </div>
+      </div>
+
       <main style={{ padding: "4rem 2rem", maxWidth: "1300px", margin: "0 auto" }}>
-        
-        <header style={{ textAlign: "center", marginBottom: "4rem" }}>
-          <h1 style={titleStyle}>MY WISHLIST</h1>
-        </header>
 
         {loading ? (
           <div style={{ textAlign: "center", fontSize: "1.5rem", fontWeight: "700" }}>LOADING WISHLIST...</div>
@@ -169,7 +188,13 @@ function WishlistCard({ title, price, link, onRemove, image, isGroup, item }) {
 }
 
 // --- Styles ---
-const titleStyle = { fontSize: "3.5rem", fontWeight: "900", color: "#1a1a1a", letterSpacing: "2px", margin: 0 };
+const bannerStyle = { background: "linear-gradient(135deg, #0f0c29, #302b63, #24243e)", padding: "3rem 1.5rem", textAlign: "center" };
+const bannerInnerStyle = { maxWidth: "600px", margin: "0 auto" };
+const bannerTitleStyle = { fontSize: "2.5rem", fontWeight: "900", color: "#fff", marginBottom: "0.5rem" };
+const bannerSubStyle = { color: "rgba(255,255,255,0.65)", marginBottom: "1.5rem" };
+const searchWrapStyle = { position: "relative", maxWidth: "440px", margin: "0 auto" };
+const searchIconStyle = { position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "1rem" };
+const searchInputStyle = { width: "100%", padding: "0.8rem 1rem 0.8rem 2.8rem", borderRadius: "10px", border: "none", fontSize: "0.95rem", outline: "none", fontFamily: "inherit", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" };
 const sectionTitleStyle = { fontSize: "1.4rem", fontWeight: "900", color: "#000", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: "1.5rem", display: "block", borderBottom: "2px solid #000", paddingBottom: "8px" };
 const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "2rem" };
 const cardStyle = { backgroundColor: "#fff", borderRadius: "16px", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 10px 30px rgba(0,0,0,0.08)", transition: "all 0.3s ease", border: "1px solid #eee", height: "100%" };

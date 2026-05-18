@@ -1,24 +1,25 @@
 // client/src/pages/admin/groups.js
 import { useEffect, useState } from "react";
-import axios from "axios";
-import { API_URL } from "../../config/api";
 import { useRouter } from "next/router";
-import Link from "next/link";
+import { http } from "../../config/http";
+
+const emptyForm = {
+  name: "",
+  productId: "",
+  minParticipants: "",
+  isActive: true,
+  deadline: "",
+  discountPercent: "",
+};
 
 export default function AdminGroupsPage() {
   const router = useRouter();
-
   const [groups, setGroups] = useState([]);
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({
-    name: "",
-    productId: "",
-    minParticipants: "",
-    isActive: true,
-    deadline: "",
-  });
+  const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -31,36 +32,19 @@ export default function AdminGroupsPage() {
 
   async function fetchGroups() {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        router.replace("/login");
-        return;
-      }
-
-      const res = await axios.get(`${API_URL}/api/admin/groups`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setGroups(res.data);
+      setFetching(true);
+      const res = await http.get("/api/admin/groups");
+      setGroups(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      console.error(err);
-      const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        "שגיאה בטעינת הקבוצות";
+      const msg = err?.response?.data?.message || err?.response?.data?.error || "Failed to load groups";
       setError(Array.isArray(msg) ? msg.join(" | ") : String(msg));
+    } finally {
+      setFetching(false);
     }
   }
 
   function resetForm() {
-    setForm({
-      name: "",
-      productId: "",
-      minParticipants: "",
-      isActive: true,
-      deadline: "",
-    });
+    setForm(emptyForm);
     setEditingId(null);
     setError("");
   }
@@ -68,16 +52,10 @@ export default function AdminGroupsPage() {
   function handleChange(e) {
     const { name, value, type, checked } = e.target;
     if (name === "isActive") {
-      setForm((prev) => ({
-        ...prev,
-        isActive: type === "checkbox" ? checked : value === "true",
-      }));
+      setForm((prev) => ({ ...prev, isActive: type === "checkbox" ? checked : value === "true" }));
       return;
     }
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setForm((prev) => ({ ...prev, [name]: value }));
   }
 
   function handleEdit(group) {
@@ -88,25 +66,18 @@ export default function AdminGroupsPage() {
       minParticipants: typeof group.minParticipants === "number" ? String(group.minParticipants) : "",
       isActive: !!group.isActive,
       deadline: group.deadline ? new Date(group.deadline).toISOString().slice(0, 16) : "",
+      discountPercent: group.discountPercent != null ? String(group.discountPercent) : "",
     });
     setError("");
   }
 
   async function handleDelete(id) {
-    if (!window.confirm("למחוק את הקבוצה הזו?")) return;
+    if (!window.confirm("Delete this group?")) return;
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        router.replace("/login");
-        return;
-      }
-      await axios.delete(`${API_URL}/api/admin/groups/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await http.delete(`/api/admin/groups/${id}`);
       await fetchGroups();
     } catch (err) {
-      console.error(err);
-      setError("שגיאה במחיקת הקבוצה");
+      setError("Failed to delete group");
     }
   }
 
@@ -116,297 +87,230 @@ export default function AdminGroupsPage() {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        router.push("/login");
-        return;
-      }
-
       const payload = {};
-      if (form.name && form.name.trim() !== "") payload.name = form.name.trim();
-      if (form.productId && form.productId.trim() !== "") payload.productId = form.productId.trim();
-      if (form.minParticipants !== "" && form.minParticipants != null) {
+      if (form.name?.trim()) payload.name = form.name.trim();
+      if (form.productId?.trim()) payload.productId = form.productId.trim();
+      if (form.minParticipants !== "") {
         const n = Number(form.minParticipants);
         if (!Number.isNaN(n)) payload.minParticipants = n;
       }
       payload.isActive = form.isActive;
       if (form.deadline) payload.deadline = form.deadline;
+      if (form.discountPercent !== "") {
+        const d = Number(form.discountPercent);
+        if (!Number.isNaN(d)) payload.discountPercent = d;
+      }
 
       if (editingId) {
-        await axios.put(`${API_URL}/api/admin/groups/${editingId}`, payload, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await http.put(`/api/admin/groups/${editingId}`, payload);
       } else {
-        await axios.post(`${API_URL}/api/admin/groups`, payload, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await http.post("/api/admin/groups", payload);
       }
 
       await fetchGroups();
       resetForm();
     } catch (err) {
-      console.error(err);
-      setError("שגיאה בשמירת הקבוצה");
+      const msg = err?.response?.data?.message || "Failed to save group";
+      setError(Array.isArray(msg) ? msg.join(" | ") : String(msg));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main style={{ padding: "2rem", fontFamily: "sans-serif", direction: "rtl" }}>
-      <h1>ניהול קבוצות (Admin)</h1>
+    <>
+      <style>{`
+        * { box-sizing: border-box; }
+        .admin-input {
+          width: 100%;
+          padding: 10px 14px;
+          border: 1px solid #2c2e33;
+          border-radius: 8px;
+          background: #1a1b1e;
+          color: #c1c2c5;
+          font-size: 0.9rem;
+          outline: none;
+          transition: border-color 0.2s;
+          margin-top: 6px;
+          display: block;
+        }
+        .admin-input:focus { border-color: #228be6; }
+        .admin-label { font-size: 0.8rem; font-weight: 700; color: #909296; text-transform: uppercase; letter-spacing: 0.5px; }
+        .group-row:hover { background: #1e1f22 !important; }
+        .action-btn { padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; border: none; transition: opacity 0.15s; }
+        .action-btn:hover { opacity: 0.8; }
+      `}</style>
 
-      <div style={{ marginBottom: "1rem" }}>
-        <Link href="/admin/products">לניהול מוצרים</Link> |{" "}
-        <Link href="/products">לרשימת המוצרים</Link> |{" "}
-        <Link href="/">דף הבית</Link>
-      </div>
+      <div style={{ minHeight: "100vh", backgroundColor: "#141517", color: "#c1c2c5", direction: "ltr" }}>
+        {/* Admin Header */}
+        <div style={{ background: "#1a1b1e", borderBottom: "1px solid #2c2e33", padding: "16px 32px", display: "flex", alignItems: "center", gap: "16px" }}>
+          <span style={{ fontSize: "1.4rem", fontWeight: "900", color: "#fff" }}>
+            <span style={{ color: "#228be6" }}>Buy</span>Force
+          </span>
+          <span style={{ background: "#f08c00", color: "#fff", padding: "3px 10px", borderRadius: "6px", fontSize: "0.7rem", fontWeight: "900", letterSpacing: "1px" }}>ADMIN</span>
+          <span style={{ color: "#909296", fontSize: "0.9rem", marginLeft: "8px" }}>/ Groups</span>
+          <div style={{ marginLeft: "auto", display: "flex", gap: "12px" }}>
+            <a href="/admin/products" style={{ color: "#909296", fontSize: "0.85rem", textDecoration: "none" }}>Products</a>
+            <a href="/" style={{ color: "#909296", fontSize: "0.85rem", textDecoration: "none" }}>Home</a>
+          </div>
+        </div>
 
-      {error && <div style={{ color: "red", marginBottom: "1rem" }}>{error}</div>}
+        <div style={{ padding: "32px", maxWidth: "1600px", margin: "0 auto" }}>
+          <div style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <h1 style={{ margin: 0, fontSize: "1.8rem", fontWeight: "900", color: "#fff" }}>Groups</h1>
+            <span style={{ color: "#909296", fontSize: "0.9rem" }}>{groups.length} groups total</span>
+          </div>
 
-      <div style={{ display: "flex", gap: "2rem", alignItems: "flex-start" }}>
-        
-        {/* טופס עריכה/יצירה */}
-        <section style={{ border: "1px solid #ddd", padding: "1rem", borderRadius: "4px", flex: "0 0 400px", backgroundColor: "#f9f9f9" }}>
-          <h2>{editingId ? "עריכת קבוצה" : "יצירת קבוצה חדשה"}</h2>
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <label> שם קבוצה <input type="text" name="name" value={form.name} onChange={handleChange} style={{ width: "100%", padding: "0.4rem" }} /> </label>
-            <label> Product ID <input type="text" name="productId" value={form.productId} onChange={handleChange} style={{ width: "100%", padding: "0.4rem" }} /> </label>
-            <label> מינימום משתתפים <input type="number" name="minParticipants" value={form.minParticipants} onChange={handleChange} style={{ width: "100%", padding: "0.4rem" }} /> </label>
-            <label> 
-              תאריך יעד (Deadline) 
-              <input type="datetime-local" name="deadline" value={form.deadline} onChange={handleChange} style={{ width: "100%", padding: "0.4rem" }} /> 
-            </label>
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <input type="checkbox" name="isActive" checked={form.isActive} onChange={handleChange} /> קבוצה פעילה
-            </label>
-            <div style={{ marginTop: "0.5rem", display: "flex", gap: "0.5rem" }}>
-              <button type="submit" disabled={loading} style={{ padding: "0.4rem 0.8rem", cursor: "pointer" }}>
-                {loading ? "שומר..." : editingId ? "עדכן קבוצה" : "צור קבוצה"}
-              </button>
-              {editingId && <button type="button" onClick={resetForm} style={{ padding: "0.4rem 0.8rem", cursor: "pointer" }}> ביטול עריכה </button>}
+          {error && (
+            <div style={{ background: "#2c1a1a", border: "1px solid #5c2020", color: "#fa5252", padding: "12px 16px", borderRadius: "8px", marginBottom: "20px", fontSize: "0.9rem" }}>
+              {error}
             </div>
-          </form>
-        </section>
+          )}
 
-        {/* רשימת קבוצות עם פרטי מוצר (אדמין) */}
-        <section style={{ flex: "1" }}>
-          <h2 style={{ marginBottom: "1rem", display: "block", width: "100%", textAlign: "left" }}>MY GROUPS</h2>
-          {groups.length === 0 && <p>אין קבוצות עדיין.</p>}
-          <div style={{ display: "grid", gap: "0.75rem" }}>
-            {groups.map((g) => (
-              <div
-                key={g.id}
-                style={{
-                  border: "1px solid #ddd",
-                  padding: "1.5rem",
-                  borderRadius: "8px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  backgroundColor: "#fff"
-                }}
-              >
-                <div style={{ display: "flex", gap: "0.5rem" }}>
-                  <button onClick={() => handleEdit(g)} style={{ padding: "0.3rem 0.6rem", cursor: "pointer" }}>ערוך</button>
-                  <button onClick={() => handleDelete(g.id)} style={{ padding: "0.3rem 0.6rem", cursor: "pointer", color: "red" }}>מחק</button>
+          {fetching ? (
+            <div style={{ textAlign: "center", padding: "60px", color: "#909296", fontSize: "1.1rem" }}>Loading groups...</div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: "24px", alignItems: "start" }}>
+
+              {/* Groups List */}
+              <section style={{ background: "#1a1b1e", borderRadius: "12px", border: "1px solid #2c2e33", overflow: "hidden" }}>
+                <div style={{ padding: "16px 20px", borderBottom: "1px solid #2c2e33", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: "800", color: "#fff", textTransform: "uppercase", letterSpacing: "1px" }}>All Groups</h2>
+                  <button onClick={resetForm} style={{ background: "#228be6", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", fontWeight: "700", fontSize: "0.85rem", cursor: "pointer" }}>
+                    + New Group
+                  </button>
                 </div>
 
-                <div style={{ textAlign: "left", flex: 1, paddingLeft: "1rem" }}>
-                  <div style={{ marginBottom: "5px" }}>
-                    <strong style={{ fontSize: "1.2rem" }}>{g.name}</strong>
-                  </div>
-                  
-                  {g.product ? (
-                    <div style={{ padding: "8px", borderRadius: "4px", marginBottom: "8px" }}>
-                      <div>product: {g.product.name}</div>
-                      <div style={{ color: "black" }}> ₪{g.product.price}</div>
-                      {g.product.description && <div style={{ fontSize: "0.85rem", fontStyle: "italic" }}>{g.product.description}</div>}
-                    </div>
+                <div>
+                  {groups.length === 0 ? (
+                    <p style={{ textAlign: "center", padding: "40px", color: "#909296" }}>No groups yet.</p>
                   ) : (
-                    <div style={{ color: "orange", fontSize: "0.85rem" }}>טרם קושר מוצר לקבוצה</div>
+                    groups.map((g) => {
+                      const isExpired = g.deadline && new Date(g.deadline) < new Date();
+                      const progress = Math.min(g.progress || 0, 100);
+                      const isCompleted = progress >= 100;
+
+                      return (
+                        <div
+                          key={g.id}
+                          className="group-row"
+                          style={{ padding: "16px 20px", borderBottom: "1px solid #25262b", background: editingId === g.id ? "#1e2a38" : "transparent", transition: "background 0.15s" }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px", flexWrap: "wrap" }}>
+                                <span style={{ fontWeight: "800", color: "#fff", fontSize: "0.95rem" }}>{g.name}</span>
+                                <span style={{ fontSize: "0.7rem", fontWeight: "700", padding: "2px 8px", borderRadius: "4px", background: isCompleted ? "#1b3a2a" : g.isActive ? "#1b2e3a" : "#2a1b1b", color: isCompleted ? "#20c997" : g.isActive ? "#228be6" : "#fa5252" }}>
+                                  {isCompleted ? "COMPLETED" : g.isActive ? "ACTIVE" : "INACTIVE"}
+                                </span>
+                                {isExpired && !isCompleted && (
+                                  <span style={{ fontSize: "0.7rem", fontWeight: "700", padding: "2px 8px", borderRadius: "4px", background: "#2c1a1a", color: "#f08c00" }}>EXPIRED</span>
+                                )}
+                              </div>
+
+                              {g.product && (() => {
+                                const disc = Number(g.discountPercent ?? 0);
+                                const orig = Number(g.product.price);
+                                const final = disc > 0 ? Math.round(orig * (1 - disc / 100) * 100) / 100 : null;
+                                return (
+                                  <div style={{ fontSize: "0.85rem", color: "#909296", marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                    <span>Product: <span style={{ color: "#c1c2c5", fontWeight: "600" }}>{g.product.name}</span></span>
+                                    {final != null ? (
+                                      <>
+                                        <span style={{ color: "#5c5f66", textDecoration: "line-through" }}>₪{orig}</span>
+                                        <span style={{ color: "#20c997", fontWeight: "700" }}>₪{final}</span>
+                                        <span style={{ background: "#1b3a2a", color: "#20c997", fontSize: "0.7rem", fontWeight: "800", padding: "2px 7px", borderRadius: "4px" }}>{disc}% OFF</span>
+                                      </>
+                                    ) : (
+                                      <span style={{ color: "#20c997", fontWeight: "700" }}>₪{orig}</span>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                              {!g.product && (
+                                <div style={{ fontSize: "0.8rem", color: "#f08c00", marginBottom: "8px" }}>No product linked</div>
+                              )}
+
+                              {/* Progress Bar */}
+                              <div style={{ marginBottom: "8px" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#909296", marginBottom: "4px" }}>
+                                  <span>{g.currentParticipants || 0} / {g.minParticipants} participants</span>
+                                  <span style={{ fontWeight: "700", color: isCompleted ? "#20c997" : "#228be6" }}>{progress}%</span>
+                                </div>
+                                <div style={{ height: "6px", background: "#25262b", borderRadius: "3px", overflow: "hidden" }}>
+                                  <div style={{ height: "100%", width: `${progress}%`, background: isCompleted ? "#20c997" : "#228be6", borderRadius: "3px", transition: "width 0.5s ease" }} />
+                                </div>
+                              </div>
+
+                              {g.deadline && (
+                                <div style={{ fontSize: "0.8rem", color: isExpired ? "#f08c00" : "#909296" }}>
+                                  ⏰ {isExpired ? "Expired: " : "Deadline: "}{new Date(g.deadline).toLocaleString("en-GB")}
+                                </div>
+                              )}
+                            </div>
+
+                            <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                              <button className="action-btn" onClick={() => handleEdit(g)} style={{ background: "#1971c2", color: "#fff" }}>Edit</button>
+                              <button className="action-btn" onClick={() => handleDelete(g.id)} style={{ background: "#2c1a1a", color: "#fa5252", border: "1px solid #5c2020" }}>Delete</button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
                   )}
+                </div>
+              </section>
 
-                  <div style={{ fontSize: "0.9rem", marginBottom: "8px" }}>
-                    target Participants: {g.minParticipants} people | status: {g.isActive ? "active" : "not active"} 
+              {/* Form Panel */}
+              <section style={{ background: "#1a1b1e", borderRadius: "12px", border: "1px solid #2c2e33", padding: "24px", position: "sticky", top: "24px" }}>
+                <h2 style={{ margin: "0 0 20px 0", fontSize: "1rem", fontWeight: "800", color: "#fff", textTransform: "uppercase", letterSpacing: "1px" }}>
+                  {editingId ? "Edit Group" : "New Group"}
+                </h2>
+
+                <form onSubmit={handleSubmit} style={{ display: "grid", gap: "16px" }}>
+                  <div>
+                    <label className="admin-label">Group Name</label>
+                    <input className="admin-input" type="text" name="name" value={form.name} onChange={handleChange} placeholder="e.g. Summer Electronics Deal" />
                   </div>
-
-                  {/* Progress Bar Section - UPDATED */}
-                  <div style={{ marginTop: "10px", padding: "5px 0" }}>
-                    <div style={{ 
-                        display: "flex", 
-                        justifyContent: "space-between", 
-                        fontSize: "0.85rem", 
-                        marginBottom: "4px",
-                        direction: "ltr" // המשתתפים בשמאל, אחוזים בימין
-                    }}>
-                      <span>
-                           <strong>{g.currentParticipants || 0}</strong>/{g.minParticipants}
-                      </span>
-                      <span style={{ fontWeight: "bold", color: (g.progress >= 100) ? "#28a745" : "#007bff" }}>
-                        {g.progress || 0}%
-                      </span>
+                  <div>
+                    <label className="admin-label">Product ID</label>
+                    <input className="admin-input" type="text" name="productId" value={form.productId} onChange={handleChange} placeholder="UUID of the product" />
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                    <div>
+                      <label className="admin-label">Min. Participants</label>
+                      <input className="admin-input" type="number" name="minParticipants" value={form.minParticipants} onChange={handleChange} min={1} placeholder="e.g. 10" />
                     </div>
-                    
-                    <div style={{ width: "100%", height: "10px", backgroundColor: "#e9ecef", borderRadius: "5px", overflow: "hidden", direction: "ltr" }}>
-                      <div style={{ 
-                        width: `${Math.min(g.progress || 0, 100)}%`, 
-                        height: "100%", 
-                        backgroundColor: (g.progress >= 100) ? "#28a745" : "#007bff",
-                        transition: "width 0.5s ease" 
-                      }} />
+                    <div>
+                      <label className="admin-label">Discount %</label>
+                      <input className="admin-input" type="number" name="discountPercent" value={form.discountPercent} onChange={handleChange} min={0} max={100} placeholder="e.g. 20" />
                     </div>
                   </div>
+                  <div>
+                    <label className="admin-label">Deadline</label>
+                    <input className="admin-input" type="datetime-local" name="deadline" value={form.deadline} onChange={handleChange} />
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px", background: "#25262b", borderRadius: "8px" }}>
+                    <input type="checkbox" id="isActive" name="isActive" checked={form.isActive} onChange={handleChange} style={{ width: "18px", height: "18px", cursor: "pointer", accentColor: "#228be6" }} />
+                    <label htmlFor="isActive" style={{ cursor: "pointer", fontWeight: "600", color: "#c1c2c5", fontSize: "0.9rem" }}>Group is Active</label>
+                  </div>
 
-                  <div style={{ marginTop: "15px" }}>
-                    {g.deadline ? (
-                      <div style={{ 
-                        fontSize: "0.9rem", 
-                        color: new Date(g.deadline) < new Date() ? "#721c24" : "#333", 
-                        fontWeight: "bold", 
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        padding: "6px 10px",
-                        backgroundColor: new Date(g.deadline) < new Date() ? "#f8d7da" : "#f1f3f5",
-                        borderRadius: "6px",
-                        border: "1px solid",
-                        borderColor: new Date(g.deadline) < new Date() ? "#f5c6cb" : "#dee2e6"
-                      }}>
-                        ⏰ Deadline: {new Date(g.deadline).toLocaleString("he-IL", {
-                          day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                        })}
-                        {new Date(g.deadline) < new Date() && <span style={{fontSize: "0.7rem", marginLeft: "4px"}}>(EXPIRED)</span>}
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: "0.85rem", color: "#999", fontStyle: "italic" }}>
-                        No Deadline Set
-                      </div>
+                  <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+                    <button type="submit" disabled={loading} style={{ flex: 1, background: "#228be6", color: "#fff", border: "none", borderRadius: "8px", padding: "12px", fontWeight: "800", fontSize: "0.9rem", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1 }}>
+                      {loading ? "Saving..." : editingId ? "Update Group" : "Create Group"}
+                    </button>
+                    {editingId && (
+                      <button type="button" onClick={resetForm} style={{ background: "#25262b", color: "#909296", border: "1px solid #2c2e33", borderRadius: "8px", padding: "12px 16px", fontWeight: "700", cursor: "pointer", fontSize: "0.85rem" }}>
+                        Cancel
+                      </button>
                     )}
                   </div>
-                  
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
-
-      <hr style={{ margin: "3rem 0", border: "0", borderTop: "2px solid #eee" }} />
-      
-      <section style={{ marginBottom: "3rem", direction: "ltr" }}>
-        <h2 style={{ 
-          marginBottom: "1.5rem", 
-          textAlign: "center", 
-          width: "100%",
-          direction: "rtl" 
-        }}>
-          All Groups
-        </h2>
-        
-        <div style={{ 
-          display: "grid", 
-          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", 
-          gap: "1.5rem",
-          direction: "ltr"
-        }}>
-          {groups && groups.length > 0 ? (
-            groups.map((g) => (
-              <GlobalGroupCard key={g.id} group={g} />
-            ))
-          ) : (
-            <p style={{ textAlign: "center", width: "100%" }}>No groups to display.</p>
+                </form>
+              </section>
+            </div>
           )}
         </div>
-      </section>
-    </main>
-  );
-}
-
-function GlobalGroupCard({ group }) {
-  return (
-    <div style={{
-      border: "1px solid #eee",
-      padding: "15px",
-      borderRadius: "12px",
-      backgroundColor: "#fff",
-      boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-      direction: "ltr", 
-      textAlign: "left"
-    }}>
-      <div style={{ 
-        display: "flex", 
-        justifyContent: "space-between", 
-        alignItems: "center",
-        marginBottom: "10px"
-      }}>
-        <h3 style={{ margin: 0, fontSize: "1.1rem", color: "#333" }}>{group.name}</h3>
-        
-        <span style={{ 
-          fontSize: "0.8rem", 
-          color: group.isActive ? "#28a745" : "#dc3545",
-          fontWeight: "bold",
-          backgroundColor: group.isActive ? "#e6ffed" : "#fff1f0",
-          padding: "2px 8px",
-          borderRadius: "4px",
-          border: `1px solid ${group.isActive ? "#b7eb8f" : "#ffa39e"}`
-        }}>
-          {group.isActive ? "Active " : "Inactive "}
-        </span>
       </div>
-      
-      <div style={{ marginBottom: "12px" }}>
-        <p style={{ margin: "5px 0", fontSize: "0.9rem", color: "black" }}>
-          Product: <strong>{group.product?.name || "None"}</strong>
-        </p>
-        <p style={{ margin: "4px 0 0 0", fontSize: "0.95rem", color: "#333" }}>
-          Price: <strong>₪{group.product?.price || "0"}</strong>
-        </p>
-        <p style={{ margin: "5px 0", fontSize: "0.85rem", color: "black", fontStyle: "italic" }}>
-          Description: {group.product?.description || "No description"}
-        </p>
-      </div>
-        
-      {/* Progress Section - UPDATED */}
-      <div style={{ marginTop: "15px" }}>
-        <div style={{ 
-          display: "flex", 
-          justifyContent: "space-between", 
-          fontSize: "0.85rem", 
-          fontWeight: "bold",
-          marginBottom: "4px",
-          direction: "ltr"
-        }}>
-          <span style={{ color: "#333" }}>
-            Users {group.currentParticipants || 0} / {group.minParticipants}
-          </span>
-          <span style={{ color: "#007bff" }}>{group.progress || 0}%</span>
-        </div>
-        
-        <div style={{ width: "100%", height: "8px", backgroundColor: "#e9ecef", borderRadius: "4px", overflow: "hidden", direction: "ltr" }}>
-          <div style={{ 
-            width: `${Math.min(group.progress || 0, 100)}%`, 
-            height: "100%", 
-            backgroundColor: (group.progress >= 100) ? "#28a745" : "#007bff", 
-            borderRadius: "4px",
-            transition: "width 0.4s ease-out"
-          }} />
-        </div>
-      </div>
-
-      <div style={{ 
-        marginTop: "15px", 
-        fontSize: "0.85rem", 
-        color: "black",
-        borderTop: "1px solid #f5f5f5",
-        paddingTop: "10px",
-        display: "flex",
-        justifyContent: "flex-start",
-        alignItems: "center",
-        gap: "5px"
-      }}>
-        ⏰ Deadline: {group.deadline ? new Date(group.deadline).toLocaleDateString("en-US") : "Not Set"}
-      </div>
-    </div>
+    </>
   );
 }

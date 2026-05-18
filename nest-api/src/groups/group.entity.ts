@@ -58,5 +58,8 @@ export class Group {
   updatedAt: Date;
 
   @Column({ type: 'timestamp', nullable: true })
-deadline?: Date | null;
+  deadline?: Date | null;
+
+  @Column({ type: 'numeric', default: 0, nullable: true })
+  discountPercent?: number | null;
 }

@@ -17,13 +17,19 @@ export default function AdminProductsPage() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [mode, setMode] = useState("create"); // create | edit
+  const [mode, setMode] = useState("create");
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-
   const [imgPreviewError, setImgPreviewError] = useState("");
+  const [copiedId, setCopiedId] = useState(null);
+
+  function copyId(id) {
+    navigator.clipboard.writeText(id);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1500);
+  }
 
   const isAdmin = useMemo(() => {
     if (typeof window === "undefined") return false;
@@ -37,7 +43,6 @@ export default function AdminProductsPage() {
       router.replace("/login");
       return;
     }
-
     (async () => {
       try {
         setError("");
@@ -45,7 +50,6 @@ export default function AdminProductsPage() {
         const res = await http.get("/api/products");
         setItems(Array.isArray(res.data) ? res.data : []);
       } catch (e) {
-        console.error(e);
         setError(e?.response?.data?.message || "Failed to load products");
       } finally {
         setLoading(false);
@@ -74,16 +78,16 @@ export default function AdminProductsPage() {
     });
     setError("");
     setImgPreviewError("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function remove(id) {
-    if (!confirm("Delete product?")) return;
+    if (!confirm("Delete this product?")) return;
     try {
       await http.delete(`/api/products/${id}`);
       setItems((prev) => prev.filter((x) => x.id !== id));
       if (editingId === id) startCreate();
     } catch (e) {
-      console.error(e);
       alert(e?.response?.data?.message || "Failed to delete product");
     }
   }
@@ -91,7 +95,6 @@ export default function AdminProductsPage() {
   function normalizeImageUrl(url) {
     const u = (url || "").trim();
     if (!u) return "";
-    // אם המשתמש שם "www..." בלי http, נוסיף https
     if (!/^https?:\/\//i.test(u)) return `https://${u}`;
     return u;
   }
@@ -111,26 +114,16 @@ export default function AdminProductsPage() {
     };
 
     try {
-      let res;
       if (mode === "create") {
-        res = await http.post("/api/products", payload);
-        const created = res.data;
-        setItems((prev) => [created, ...prev]);
+        const res = await http.post("/api/products", payload);
+        setItems((prev) => [res.data, ...prev]);
       } else {
-        res = await http.patch(`/api/products/${editingId}`, payload);
-        const updated = res.data;
-        setItems((prev) => prev.map((x) => (x.id === editingId ? updated : x)));
+        const res = await http.patch(`/api/products/${editingId}`, payload);
+        setItems((prev) => prev.map((x) => (x.id === editingId ? res.data : x)));
       }
-
       startCreate();
     } catch (e) {
-      console.error(e);
-      const msg =
-        e?.response?.data?.message ||
-        e?.response?.data?.error ||
-        "Save failed";
-
-      // אם השרת מחזיר message כמערך (class-validator), נציג יפה:
+      const msg = e?.response?.data?.message || e?.response?.data?.error || "Save failed";
       if (Array.isArray(msg)) setError(msg.join(" | "));
       else setError(msg);
     } finally {
@@ -141,268 +134,192 @@ export default function AdminProductsPage() {
   const previewUrl = form.imageUrl ? normalizeImageUrl(form.imageUrl) : "";
 
   return (
-    <main style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-      <h1>Admin Products</h1>
+    <>
+      <style>{`
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'Inter', sans-serif; }
+        .admin-input {
+          width: 100%;
+          padding: 10px 14px;
+          border: 1px solid #2c2e33;
+          border-radius: 8px;
+          background: #1a1b1e;
+          color: #c1c2c5;
+          font-size: 0.9rem;
+          outline: none;
+          transition: border-color 0.2s;
+          margin-top: 6px;
+          display: block;
+        }
+        .admin-input:focus { border-color: #228be6; }
+        .admin-label { font-size: 0.8rem; font-weight: 700; color: #909296; text-transform: uppercase; letter-spacing: 0.5px; }
+        .db-row:hover td { background: #1e1f22; }
+        .action-btn { padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; border: none; transition: opacity 0.15s; white-space: nowrap; }
+        .action-btn:hover { opacity: 0.8; }
+      `}</style>
 
-      {loading ? <p>Loading...</p> : null}
-      {error ? <p style={{ color: "red" }}>{error}</p> : null}
+      <div style={{ minHeight: "100vh", backgroundColor: "#141517", color: "#c1c2c5", direction: "ltr" }}>
+        {/* Admin Header */}
+        <div style={{ background: "#1a1b1e", borderBottom: "1px solid #2c2e33", padding: "16px 32px", display: "flex", alignItems: "center", gap: "16px" }}>
+          <span style={{ fontSize: "1.4rem", fontWeight: "900", color: "#fff" }}>
+            <span style={{ color: "#228be6" }}>Buy</span>Force
+          </span>
+          <span style={{ background: "#f08c00", color: "#fff", padding: "3px 10px", borderRadius: "6px", fontSize: "0.7rem", fontWeight: "900", letterSpacing: "1px" }}>ADMIN</span>
+          <span style={{ color: "#909296", fontSize: "0.9rem", marginLeft: "8px" }}>/ Products</span>
+          <div style={{ marginLeft: "auto", display: "flex", gap: "12px" }}>
+            <a href="/admin/groups" style={{ color: "#909296", fontSize: "0.85rem", textDecoration: "none" }}>Groups</a>
+            <a href="/" style={{ color: "#909296", fontSize: "0.85rem", textDecoration: "none" }}>Home</a>
+          </div>
+        </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 420px",
-          gap: "1.5rem",
-          alignItems: "start",
-          marginTop: "1rem",
-        }}
-      >
-        {/* List */}
-        <section style={{ border: "1px solid #eee", borderRadius: 6, padding: "1rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <h2 style={{ marginTop: 0 }}>Products</h2>
-            <button onClick={startCreate} style={{ cursor: "pointer" }}>
-              + New
-            </button>
+        <div style={{ padding: "32px", maxWidth: "1600px", margin: "0 auto" }}>
+          <div style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <h1 style={{ margin: 0, fontSize: "1.8rem", fontWeight: "900", color: "#fff" }}>Products</h1>
+            <span style={{ color: "#909296", fontSize: "0.9rem" }}>{items.length} products total</span>
           </div>
 
-          <div style={{ display: "grid", gap: "0.75rem" }}>
-            {items.map((p) => (
-              <div
-                key={p.id}
-                style={{
-                  border: "1px solid #ddd",
-                  borderRadius: 6,
-                  padding: "0.75rem",
-                  display: "flex",
-                  gap: "1rem",
-                  alignItems: "flex-start",
-                }}
-              >
-                {/* תצוגת תמונה */}
-                <div
-                  style={{
-                    width: 64,
-                    height: 64,
-                    borderRadius: 6,
-                    overflow: "hidden",
-                    background: "#fafafa",
-                    display: "grid",
-                    placeItems: "center",
-                    flex: "0 0 auto",
-                    border: "1px solid #eee"
-                  }}
-                >
-                  {p.imageUrl ? (
-                    <img
-                      src={p.imageUrl}
-                      alt={p.name}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                      }}
-                    />
-                  ) : (
-                    <span style={{ opacity: 0.6, fontSize: 12 }}>No image</span>
-                  )}
+          {error && (
+            <div style={{ background: "#2c1a1a", border: "1px solid #5c2020", color: "#fa5252", padding: "12px 16px", borderRadius: "8px", marginBottom: "20px", fontSize: "0.9rem" }}>
+              {error}
+            </div>
+          )}
+
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "60px", color: "#909296", fontSize: "1.1rem" }}>Loading products...</div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: "24px", alignItems: "start" }}>
+
+              {/* Product Database Table */}
+              <section style={{ background: "#1a1b1e", borderRadius: "12px", border: "1px solid #2c2e33", overflow: "hidden" }}>
+                <div style={{ padding: "16px 20px", borderBottom: "1px solid #2c2e33", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: "800", color: "#fff", textTransform: "uppercase", letterSpacing: "1px" }}>Product Database</h2>
+                  <button onClick={startCreate} style={{ background: "#228be6", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", fontWeight: "700", fontSize: "0.85rem", cursor: "pointer" }}>
+                    + New Product
+                  </button>
                 </div>
 
-                {/* פרטי המוצר - מעודכן לשורות נפרדות */}
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, marginBottom: "4px" }}>{p.name}</div>
-                  
-                  <div style={{ opacity: 0.8, fontSize: 13, display: "flex", flexDirection: "column", gap: "2px" }}>
-                     <div>Category: {p.category}</div>
-                    <div>Price: ₪{p.price}</div>
-                    <div>Stock: {p.stock}</div>
+                {items.length === 0 ? (
+                  <p style={{ textAlign: "center", padding: "40px", color: "#909296" }}>No products yet.</p>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+                      <thead>
+                        <tr style={{ borderBottom: "1px solid #2c2e33" }}>
+                          {["Image", "Name", "Category", "Price", "Stock", "Description", "ID", "Actions"].map((h) => (
+                            <th key={h} style={{ padding: "12px 16px", fontSize: "0.72rem", fontWeight: "800", color: "#909296", textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {items.map((p) => (
+                          <tr key={p.id} className="db-row" style={{ borderBottom: "1px solid #25262b", background: editingId === p.id ? "#1e2a38" : "transparent" }}>
+                            <td style={{ padding: "10px 16px" }}>
+                              <div style={{ width: 40, height: 40, background: "#25262b", borderRadius: "6px", overflow: "hidden", display: "grid", placeItems: "center" }}>
+                                {p.imageUrl
+                                  ? <img src={p.imageUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                                  : <span style={{ fontSize: "10px", color: "#5c5f66" }}>—</span>
+                                }
+                              </div>
+                            </td>
+                            <td style={{ padding: "10px 16px", fontWeight: "700", color: "#fff", whiteSpace: "nowrap", maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</td>
+                            <td style={{ padding: "10px 16px" }}>
+                              <span style={{ background: "#25262b", padding: "3px 8px", borderRadius: "4px", fontSize: "0.78rem", whiteSpace: "nowrap" }}>{p.category}</span>
+                            </td>
+                            <td style={{ padding: "10px 16px", color: "#20c997", fontWeight: "700", whiteSpace: "nowrap" }}>₪{p.price}</td>
+                            <td style={{ padding: "10px 16px", color: p.stock > 0 ? "#c1c2c5" : "#fa5252", whiteSpace: "nowrap" }}>{p.stock}</td>
+                            <td style={{ padding: "10px 16px", fontSize: "0.82rem", color: "#909296", maxWidth: "220px" }}>
+                              {p.description
+                                ? (p.description.length > 60 ? p.description.slice(0, 60) + "…" : p.description)
+                                : <span style={{ color: "#5c5f66", fontStyle: "italic" }}>—</span>
+                              }
+                            </td>
+                            <td style={{ padding: "10px 16px" }}>
+                              <button
+                                className="action-btn"
+                                onClick={() => copyId(p.id)}
+                                title={p.id}
+                                style={{ background: copiedId === p.id ? "#1b3a2a" : "#25262b", color: copiedId === p.id ? "#20c997" : "#909296", border: `1px solid ${copiedId === p.id ? "#20c997" : "#2c2e33"}`, fontFamily: "monospace", fontSize: "0.7rem", letterSpacing: "0.3px" }}
+                              >
+                                {copiedId === p.id ? "✓ Copied" : p.id.slice(0, 8) + "…"}
+                              </button>
+                            </td>
+                            <td style={{ padding: "10px 16px" }}>
+                              <div style={{ display: "flex", gap: "6px" }}>
+                                <button className="action-btn" onClick={() => startEdit(p)} style={{ background: "#1971c2", color: "#fff" }}>Edit</button>
+                                <button className="action-btn" onClick={() => remove(p.id)} style={{ background: "#2c1a1a", color: "#fa5252", border: "1px solid #5c2020" }}>Delete</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+
+              {/* Form Panel */}
+              <section style={{ background: "#1a1b1e", borderRadius: "12px", border: "1px solid #2c2e33", padding: "24px", position: "sticky", top: "24px" }}>
+                <h2 style={{ margin: "0 0 20px 0", fontSize: "1rem", fontWeight: "800", color: "#fff", textTransform: "uppercase", letterSpacing: "1px" }}>
+                  {mode === "create" ? "New Product" : "Edit Product"}
+                </h2>
+
+                <form onSubmit={submit} style={{ display: "grid", gap: "16px" }}>
+                  <div>
+                    <label className="admin-label">Product Name</label>
+                    <input className="admin-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="e.g. Wireless Headphones" />
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                    <div>
+                      <label className="admin-label">Price (₪)</label>
+                      <input className="admin-input" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} min={0} required />
+                    </div>
+                    <div>
+                      <label className="admin-label">Stock</label>
+                      <input className="admin-input" type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} min={0} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="admin-label">Category</label>
+                    <input className="admin-input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} required placeholder="e.g. Electronics" />
+                  </div>
+                  <div>
+                    <label className="admin-label">Description</label>
+                    <textarea className="admin-input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={{ minHeight: "80px", resize: "vertical" }} placeholder="Short product description..." />
+                  </div>
+                  <div>
+                    <label className="admin-label">Image URL</label>
+                    <input className="admin-input" value={form.imageUrl} onChange={(e) => { setForm({ ...form, imageUrl: e.target.value }); setImgPreviewError(""); }} placeholder="https://example.com/image.jpg" />
                   </div>
 
-                  {p.description && (
-                    <div style={{ 
-                      opacity: 0.7, 
-                      fontSize: 12, 
-                      marginTop: 6, 
-                      lineHeight: "1.4",
-                      borderTop: "1px solid #eee",
-                      paddingTop: 4 
-                    }}>
-                      {p.description}
+                  {previewUrl && (
+                    <div style={{ display: "flex", gap: "12px", alignItems: "center", background: "#25262b", padding: "12px", borderRadius: "8px" }}>
+                      <div style={{ width: 56, height: 56, borderRadius: "6px", overflow: "hidden", background: "#2c2e33", flexShrink: 0 }}>
+                        <img src={previewUrl} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={() => setImgPreviewError("Image failed to load")} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "0.75rem", color: "#909296", fontWeight: "700", textTransform: "uppercase" }}>Preview</div>
+                        {imgPreviewError && <div style={{ color: "#fa5252", fontSize: "0.8rem", marginTop: "4px" }}>{imgPreviewError}</div>}
+                      </div>
                     </div>
                   )}
-                </div>
 
-                {/* כפתורי פעולה */}
-                <div style={{ display: "flex", gap: "0.5rem" }}>
-                  <button onClick={() => startEdit(p)} style={{ cursor: "pointer" }}>
-                    Edit
-                  </button>
-                  <button onClick={() => remove(p.id)} style={{ cursor: "pointer" }}>
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Form */}
-        <section style={{ border: "1px solid #eee", borderRadius: 6, padding: "1rem" }}>
-          <h2 style={{ marginTop: 0 }}>
-            {mode === "create" ? "Create Product" : "Edit Product"}
-          </h2>
-
-          <form onSubmit={submit} style={{ display: "grid", gap: "0.75rem" }}>
-            <label>
-              Name
-              <input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                style={{ width: "100%", padding: "0.5rem" }}
-                required
-              />
-            </label>
-
-            <label>
-              Price
-              <input
-                type="number"
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: e.target.value })}
-                style={{ width: "100%", padding: "0.5rem" }}
-                min={0}
-                required
-              />
-            </label>
-
-            <label>
-              Category
-              <input
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-                style={{ width: "100%", padding: "0.5rem" }}
-                required
-              />
-            </label>
-
-            <label>
-              Stock
-              <input
-                type="number"
-                value={form.stock}
-                onChange={(e) => setForm({ ...form, stock: e.target.value })}
-                style={{ width: "100%", padding: "0.5rem" }}
-                min={0}
-              />
-            </label>
-
-            <label>
-              Description
-              <textarea
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                style={{ width: "100%", padding: "0.5rem", minHeight: 80 }}
-              />
-            </label>
-
-            <label>
-              Image URL (must be http/https)
-              <input
-                value={form.imageUrl}
-                onChange={(e) => {
-                  setForm({ ...form, imageUrl: e.target.value });
-                  setImgPreviewError("");
-                }}
-                style={{ width: "100%", padding: "0.5rem" }}
-                placeholder="https://example.com/image.jpg"
-              />
-            </label>
-
-            {previewUrl ? (
-              <div style={{ display: "grid", gap: 8 }}>
-                <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-                  <div
-                    style={{
-                      width: 72,
-                      height: 72,
-                      borderRadius: 6,
-                      overflow: "hidden",
-                      background: "#fafafa",
-                      border: "1px solid #ddd",
-                      display: "grid",
-                      placeItems: "center",
-                    }}
-                  >
-                    <img
-                      src={previewUrl}
-                      alt="preview"
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                      onError={() => setImgPreviewError("Image failed to load (bad URL or blocked by CORS)")}
-                    />
+                  <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+                    <button type="submit" disabled={saving} style={{ flex: 1, background: "#228be6", color: "#fff", border: "none", borderRadius: "8px", padding: "12px", fontWeight: "800", fontSize: "0.9rem", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}>
+                      {saving ? "Saving..." : mode === "create" ? "Create Product" : "Update Product"}
+                    </button>
+                    {mode === "edit" && (
+                      <button type="button" onClick={startCreate} style={{ background: "#25262b", color: "#909296", border: "1px solid #2c2e33", borderRadius: "8px", padding: "12px 16px", fontWeight: "700", cursor: "pointer", fontSize: "0.85rem" }}>
+                        Cancel
+                      </button>
+                    )}
                   </div>
-                  <span style={{ opacity: 0.7, fontSize: 13 }}>Preview</span>
-                </div>
+                </form>
+              </section>
 
-                {imgPreviewError ? (
-                  <div style={{ color: "red", fontSize: 13 }}>{imgPreviewError}</div>
-                ) : null}
-
-                <div style={{ fontSize: 12, opacity: 0.7 }}>
-                  Saved URL will be: <b>{previewUrl}</b>
-                </div>
-              </div>
-            ) : null}
-
-            <button
-              disabled={saving}
-              type="submit"
-              style={{ padding: "0.6rem", cursor: "pointer" }}
-            >
-              {saving ? "Saving..." : mode === "create" ? "Create" : "Update"}
-            </button>
-          </form>
-        </section>
+            </div>
+          )}
+        </div>
       </div>
-
-      {/* Database Table */}
-      <section style={{ marginTop: "4rem", borderTop: "2px solid #eee", paddingTop: "2rem" }}>
-        <h2 style={{ marginBottom: "1.5rem" }}>PRODUCT LIST DATABASE</h2>
-        
-        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", background: "#fff", borderRadius: "8px", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-          <thead>
-            <tr style={{ background: "#f8f9fa", borderBottom: "2px solid #eee" }}>
-              <th style={{ padding: "12px" }}>Name</th>
-              <th style={{ padding: "12px" }}>ID</th>
-              <th style={{ padding: "12px" }}>Image</th>
-              <th style={{ padding: "12px" }}>Category</th>
-              <th style={{ padding: "12px" }}>Price</th>
-              <th style={{ padding: "12px" }}>Stock</th>
-              <th style={{ padding: "12px" }}>Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((p) => (
-              <tr key={p.id} style={{ borderBottom: "1px solid #eee" }}>
-                <td style={{ padding: "12px", fontWeight: "bold" }}>{p.name}</td>
-                <td style={{ padding: "12px", fontSize: "12px", color: "#666", fontFamily: "monospace" }}>{p.id}</td>
-                <td style={{ padding: "12px" }}>
-                  <div style={{ width: "40px", height: "40px", background: "#eee", borderRadius: "4px", overflow: "hidden" }}>
-                    {p.imageUrl && <img src={p.imageUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt={p.name} />}
-                  </div>
-                </td>
-                <td style={{ padding: "12px" }}>{p.category}</td>
-                <td style={{ padding: "12px" }}>₪{p.price}</td>
-                <td style={{ padding: "12px" }}>{p.stock}</td>
-                <td style={{ padding: "12px", fontSize: "13px", color: "#555", maxWidth: "300px" }}>
-                  {p.description || <span style={{ color: "#ccc" }}>No description</span>}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {items.length === 0 && (
-          <p style={{ textAlign: "center", padding: "2rem", color: "#999" }}>לא נמצאו מוצרים במאגר.</p>
-        )}
-      </section>
-    </main>
+    </>
   );
 }

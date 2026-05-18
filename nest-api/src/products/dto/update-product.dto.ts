@@ -6,7 +6,6 @@ import {
   Min,
   IsInt,
   MaxLength,
-  IsUrl,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -37,7 +36,7 @@ export class UpdateProductDto {
   description?: string;
 
   @IsOptional()
-  @IsUrl()
+  @IsString()
   @MaxLength(500)
   imageUrl?: string;
 }

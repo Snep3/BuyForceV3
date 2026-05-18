@@ -1,4 +1,3 @@
-// client/pages/login.js
 import { useState } from "react";
 import axios from "axios";
 import { API_URL } from "../config/api";
@@ -7,8 +6,8 @@ import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("test1@test.com");
-  const [password, setPassword] = useState("123456");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -18,134 +17,165 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await axios.post(`${API_URL}/api/users/login`, {
-        email,
-        password,
-      });
-
-      if (typeof window !== "undefined") {
-        localStorage.setItem("token", res.data.token);
-        localStorage.setItem("user", JSON.stringify(res.data.user));
-        window.location.href = "/";
-      }
-
-      if (res.data.user?.is_admin) {
-        router.push("/home");
-      } else {
-        router.push("/home");
-      }
+      const res = await axios.post(`${API_URL}/api/users/login`, { email, password });
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+      router.push("/");
     } catch (err) {
-      console.error(err);
-      setError(
-        err?.response?.data?.error || "Login failed. Check email/password."
-      );
+      setError(err?.response?.data?.error || "Login failed. Check your email and password.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "100vh",
-        width: "100vw",
-        margin: 0,
-        padding: "2rem",
-        fontFamily: "sans-serif",
-        
-        // הגדרות תמונת הרקע (זהה ל-Register)
-        backgroundImage: "linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)), url('https://ishai.co.il/wp-content/uploads/2023/02/BDish_20161009_173921494_21.jpg')",
-        backgroundSize: "contain", 
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-        backgroundAttachment: "fixed",
-      }}
-    >
-      <h1 style={{ fontSize: "4rem", marginBottom: "1rem", color: "#000" }}>
-        Buyforce Login
-      </h1>
+    <main className="auth-page">
+      <div className="auth-card">
+        <div className="auth-logo">BuyForce</div>
+        <h1 className="auth-title">Welcome back</h1>
+        <p className="auth-sub">Sign in to continue</p>
 
-      <p style={{ marginBottom: "2.5rem", fontSize: "1.4rem", fontWeight: "bold" }}>
-        <Link href="/register" style={{ color: "#0070f3", textDecoration: "underline" }}>
-          Don't have an account? Press here to register
-        </Link>
-      </p>
-
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          width: "100%",
-          maxWidth: "550px", 
-          display: "flex",
-          flexDirection: "column",
-          gap: "2.5rem", 
-          textAlign: "right",
-        }}
-      >
-        <label style={{ display: "flex", flexDirection: "column", gap: "0.8rem", fontSize: "1.6rem", fontWeight: "900" }}>
-          אימייל
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{ 
-              padding: "1.5rem", 
-              borderRadius: "10px", 
-              border: "3px solid #000", 
-              fontSize: "1.4rem",
-              backgroundColor: "rgba(255, 255, 255, 0.9)",
-              boxShadow: "0 4px 10px rgba(0,0,0,0.1)"
-            }}
-          />
-        </label>
-
-        <label style={{ display: "flex", flexDirection: "column", gap: "0.8rem", fontSize: "1.6rem", fontWeight: "900" }}>
-          סיסמה
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{ 
-              padding: "1.5rem", 
-              borderRadius: "10px", 
-              border: "3px solid #000", 
-              fontSize: "1.4rem",
-              backgroundColor: "rgba(255, 255, 255, 0.9)",
-              boxShadow: "0 4px 10px rgba(0,0,0,0.1)"
-            }}
-          />
-        </label>
-
-        {error && (
-          <div style={{ color: "red", fontSize: "1.3rem", fontWeight: "bold", textAlign: "center", backgroundColor: "white", padding: "10px", borderRadius: "8px" }}>
-            {error}
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="field">
+            <label>Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+            />
           </div>
-        )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            marginTop: "1rem",
-            padding: "1.8rem",
-            cursor: "pointer",
-            backgroundColor: "blue", // כפתור כחול למראה בולט
-            color: "white",
-            border: "none",
-            borderRadius: "10px",
-            fontWeight: "900",
-            fontSize: "1.8rem",
-            opacity: loading ? 0.7 : 1,
-            boxShadow: "0 10px 20px rgba(0,0,0,0.3)"
-          }}
-        >
-          {loading ? "מתחבר..." : "התחבר עכשיו"}
-        </button>
-      </form>
+          <div className="field">
+            <label>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+            />
+          </div>
+
+          {error && <div className="auth-error">{error}</div>}
+
+          <button type="submit" disabled={loading} className="auth-btn">
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
+
+        <p className="auth-switch">
+          Don&apos;t have an account?{" "}
+          <Link href="/register">Create one</Link>
+        </p>
+      </div>
+
+      <style jsx>{`
+        .auth-page {
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+          padding: 2rem;
+        }
+        .auth-card {
+          background: #fff;
+          border-radius: 20px;
+          padding: 2.5rem 2rem;
+          width: 100%;
+          max-width: 420px;
+          box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+        }
+        .auth-logo {
+          font-size: 1.6rem;
+          font-weight: 900;
+          letter-spacing: -0.5px;
+          color: #228be6;
+          margin-bottom: 1.5rem;
+        }
+        .auth-title {
+          font-size: 1.8rem;
+          font-weight: 800;
+          color: #111;
+          margin: 0 0 0.25rem;
+        }
+        .auth-sub {
+          color: #868e96;
+          margin: 0 0 2rem;
+        }
+        .auth-form {
+          display: flex;
+          flex-direction: column;
+          gap: 1.2rem;
+        }
+        .field {
+          display: flex;
+          flex-direction: column;
+          gap: 0.4rem;
+        }
+        .field label {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: #495057;
+        }
+        .field input {
+          padding: 0.75rem 1rem;
+          border: 1.5px solid #dee2e6;
+          border-radius: 10px;
+          font-size: 1rem;
+          outline: none;
+          transition: border-color 0.2s;
+          font-family: inherit;
+        }
+        .field input:focus {
+          border-color: #228be6;
+        }
+        .auth-error {
+          background: #fff5f5;
+          color: #c92a2a;
+          border: 1px solid #ffa8a8;
+          border-radius: 8px;
+          padding: 0.75rem 1rem;
+          font-size: 0.9rem;
+          font-weight: 500;
+        }
+        .auth-btn {
+          padding: 0.9rem;
+          background: #228be6;
+          color: #fff;
+          border: none;
+          border-radius: 10px;
+          font-size: 1rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: background 0.2s, opacity 0.2s;
+          font-family: inherit;
+          margin-top: 0.5rem;
+        }
+        .auth-btn:hover:not(:disabled) {
+          background: #1971c2;
+        }
+        .auth-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+        .auth-switch {
+          text-align: center;
+          margin-top: 1.5rem;
+          color: #868e96;
+          font-size: 0.9rem;
+        }
+        .auth-switch a {
+          color: #228be6;
+          font-weight: 600;
+          text-decoration: none;
+        }
+        .auth-switch a:hover {
+          text-decoration: underline;
+        }
+      `}</style>
     </main>
   );
 }

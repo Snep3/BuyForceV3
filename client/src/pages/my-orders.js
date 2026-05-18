@@ -3,13 +3,13 @@ import axios from "axios";
 import { API_URL } from "../config/api";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import NavBar from "../components/NavBar";
 
 export default function MyOrdersPage() {
   const router = useRouter();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
 
   const fetchOrders = async (token) => {
     try {
@@ -69,27 +69,57 @@ export default function MyOrdersPage() {
     }
   };
 
+  const filtered = orders.filter((o) => {
+    const q = search.toLowerCase();
+    return (
+      o.id?.toLowerCase().includes(q) ||
+      o.group?.name?.toLowerCase().includes(q) ||
+      o.items?.some((i) => i.product?.name?.toLowerCase().includes(q))
+    );
+  });
+
   return (
     <div style={pageWrapperStyle}>
-      
-      <main style={mainContentStyle}>
-        <div style={headerSectionStyle}>
-          <h1 style={titleStyle}>My Orders</h1>
-          <p style={subtitleStyle}>Track your purchases and group orders in one place.</p>
+      {/* Banner */}
+      <div style={bannerStyle}>
+        <div style={bannerInnerStyle}>
+          <h1 style={bannerTitleStyle}>My Orders</h1>
+          <p style={bannerSubStyle}>Track your purchases and group orders in one place.</p>
+          <div style={searchWrapStyle}>
+            <span style={searchIconStyle}>🔍</span>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by product, group or order ID..."
+              style={searchInputStyle}
+            />
+          </div>
         </div>
+      </div>
 
+      <main style={mainContentStyle}>
         {loading ? (
           <p style={{ textAlign: "center", marginTop: "2rem" }}>Loading orders...</p>
         ) : error ? (
           <div style={errorCardStyle}>{error}</div>
-        ) : orders.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div style={emptyStateStyle}>
-            <h3>No orders yet</h3>
-            <Link href="/" style={shopLinkStyle}>Start Shopping</Link>
+            {search ? (
+              <>
+                <h3>No orders match "{search}"</h3>
+                <button onClick={() => setSearch("")} style={{ marginTop: "1rem", padding: "8px 20px", background: "#228be6", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "600" }}>Clear search</button>
+              </>
+            ) : (
+              <>
+                <h3>No orders yet</h3>
+                <Link href="/" style={shopLinkStyle}>Start Shopping</Link>
+              </>
+            )}
           </div>
         ) : (
           <div style={ordersGridStyle}>
-            {orders.map((order) => {
+            {filtered.map((order) => {
               const statusColors = getStatusStyle(order.status);
               return (
                 <div key={order.id} style={orderCardStyle}>
@@ -165,11 +195,15 @@ export default function MyOrdersPage() {
 }
 
 // --- Styles ---
+const bannerStyle = { background: "linear-gradient(135deg, #0f0c29, #302b63, #24243e)", padding: "3rem 1.5rem", textAlign: "center" };
+const bannerInnerStyle = { maxWidth: "600px", margin: "0 auto" };
+const bannerTitleStyle = { fontSize: "2.5rem", fontWeight: "900", color: "#fff", marginBottom: "0.5rem" };
+const bannerSubStyle = { color: "rgba(255,255,255,0.65)", marginBottom: "1.5rem" };
+const searchWrapStyle = { position: "relative", maxWidth: "440px", margin: "0 auto" };
+const searchIconStyle = { position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "1rem" };
+const searchInputStyle = { width: "100%", padding: "0.8rem 1rem 0.8rem 2.8rem", borderRadius: "10px", border: "none", fontSize: "0.95rem", outline: "none", fontFamily: "inherit", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" };
 const pageWrapperStyle = { minHeight: "100vh", backgroundColor: "#f8f9fa", direction: "ltr" };
 const mainContentStyle = { padding: "40px 20px", maxWidth: "1200px", margin: "0 auto" };
-const headerSectionStyle = { marginBottom: "30px" };
-const titleStyle = { fontSize: "2.5rem", fontWeight: "900", color: "#1a1a1a", margin: 0 };
-const subtitleStyle = { color: "#666", fontSize: "1.1rem" };
 const ordersGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px", width: "100%" };
 const orderCardStyle = { backgroundColor: "#fff", borderRadius: "16px", padding: "24px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", border: "1px solid #f0f0f0", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "380px" };
 const orderHeaderStyle = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid #eee", paddingBottom: "15px", marginBottom: "15px" };

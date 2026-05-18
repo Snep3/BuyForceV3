@@ -70,19 +70,27 @@ export class GroupsService {
             )
           : 0;
 
+      const discountPercent = Number(g.discountPercent ?? 0);
+      const originalPrice = g.product?.price != null ? Number(g.product.price) : null;
+      const discountedPrice = originalPrice != null && discountPercent > 0
+        ? Math.round(originalPrice * (1 - discountPercent / 100) * 100) / 100
+        : originalPrice;
+
       return {
         id: g.id,
         name: g.name,
         description: g.product?.description,
         minParticipants: g.minParticipants,
         isActive: isExpired ? false : g.isActive,
-        isExpired: !!isExpired, 
-        deadline: g.deadline,    
+        isExpired: !!isExpired,
+        deadline: g.deadline,
         productId: g.productId,
         product: g.product,
         currentParticipants,
         progress,
         isCompleted: g.isCompleted,
+        discountPercent,
+        discountedPrice,
       };
     });
   }
@@ -108,6 +116,12 @@ export class GroupsService {
             )
           : 0;
 
+      const discountPercent = Number(g.discountPercent ?? 0);
+      const originalPrice = g.product?.price != null ? Number(g.product.price) : null;
+      const discountedPrice = originalPrice != null && discountPercent > 0
+        ? Math.round(originalPrice * (1 - discountPercent / 100) * 100) / 100
+        : originalPrice;
+
       return {
         id: g.id,
         name: g.name,
@@ -115,12 +129,14 @@ export class GroupsService {
         minParticipants: g.minParticipants,
         isActive: g.isActive,
         isCompleted: g.isCompleted,
-        deadline: g.deadline, 
+        deadline: g.deadline,
         productId: g.productId,
         product: g.product,
         currentParticipants,
         progress,
         joinedAt: m.joinedAt,
+        discountPercent,
+        discountedPrice,
       };
     });
   }
@@ -155,16 +171,17 @@ async joinGroupWithPayment(userId: string, groupId: string) {
       return { joined: false, alreadyMember: true, message: 'Already joined this group' };
     }
 
-    try {
-      await this.ordersService.createOrder(userId, {
-        groupId: group.id,
-        productId: group.productId,
-        quantity: 1,
-        status: 'pending'
-      });
-    } catch (err) {
-      console.error("Auto-order creation failed:", err);
-      throw new BadRequestException('Failed to create order for this group');
+    if (group.productId) {
+      try {
+        await this.ordersService.createOrder(userId, {
+          groupId: group.id,
+          productId: group.productId,
+          quantity: 1,
+          status: 'pending',
+        });
+      } catch (err) {
+        console.error('Auto-order creation failed:', err);
+      }
     }
 
     const membership = this.groupMemberRepo.create({
@@ -348,9 +365,12 @@ async getGroupById(id: string) {
   }
 
   async create(dto: CreateGroupDto) {
-    const product = await this.productRepo.findOne({
-      where: { id: dto.productId },
-    });
+    let product: Product | null = null;
+    try {
+      product = await this.productRepo.findOne({ where: { id: dto.productId } });
+    } catch {
+      throw new BadRequestException('Invalid product ID format');
+    }
     if (!product) throw new BadRequestException('Product not found');
 
     const group = this.groupRepo.create({
@@ -358,8 +378,9 @@ async getGroupById(id: string) {
       minParticipants: dto.minParticipants,
       isActive: dto.isActive ?? true,
       product,
-      deadline: dto.deadline, 
+      deadline: dto.deadline,
       productId: product.id,
+      discountPercent: dto.discountPercent ?? 0,
     });
 
     if (dto.description !== undefined) group.description = dto.description;
@@ -376,12 +397,16 @@ async getGroupById(id: string) {
     if (dto.minParticipants !== undefined)
       group.minParticipants = dto.minParticipants;
     if (dto.isActive !== undefined) group.isActive = dto.isActive;
-    if (dto.deadline !== undefined) group.deadline = dto.deadline ? new Date(dto.deadline) : null; 
+    if (dto.deadline !== undefined) group.deadline = dto.deadline ? new Date(dto.deadline) : null;
+    if (dto.discountPercent !== undefined) group.discountPercent = dto.discountPercent;
 
     if (dto.productId !== undefined) {
-      const product = await this.productRepo.findOne({
-        where: { id: dto.productId },
-      });
+      let product: Product | null = null;
+      try {
+        product = await this.productRepo.findOne({ where: { id: dto.productId } });
+      } catch {
+        throw new BadRequestException('Invalid product ID format');
+      }
       if (!product) throw new BadRequestException('Product not found');
 
       group.product = product;

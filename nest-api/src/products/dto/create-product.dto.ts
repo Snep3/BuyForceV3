@@ -7,7 +7,6 @@ import {
   Min,
   IsInt,
   MaxLength,
-  IsUrl,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -38,7 +37,7 @@ export class CreateProductDto {
 
   // ✅ חדש
   @IsOptional()
-  @IsUrl()
+  @IsString()
   @MaxLength(500)
   imageUrl?: string;
 }

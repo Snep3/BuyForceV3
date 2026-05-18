@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsInt, Min, IsBoolean, IsDateString } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsInt, IsNumber, Min, Max, IsBoolean, IsDateString, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateGroupDto {
@@ -6,13 +6,11 @@ export class CreateGroupDto {
   @IsNotEmpty()
   name: string;
 
-  // תיקון כאן: הוספת @ ושינוי ל-IsDateString (אות גדולה)
-  @IsDateString() 
+  @IsDateString()
   @IsOptional()
   deadline?: string;
 
-  // מזהה המוצר של הקבוצה (products.id)
-  @IsString()
+  @IsUUID()
   @IsNotEmpty()
   productId: string;
 
@@ -30,4 +28,11 @@ export class CreateGroupDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @IsOptional()
+  discountPercent?: number;
 }

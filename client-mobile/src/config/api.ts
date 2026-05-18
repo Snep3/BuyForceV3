@@ -1,5 +1,5 @@
 // CHANGE TO PROPER BACKEND URL
-const API_URL = 'http://192.168.150.7:4000';
+const API_URL = 'http://172.20.30.106:4000';
 
 export async function fetchGroups() {
   const res = await fetch(`${API_URL}/api/groups`);
