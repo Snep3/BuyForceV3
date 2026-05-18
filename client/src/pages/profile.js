@@ -10,17 +10,20 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState(null);
   const [myGroups, setMyGroups] = useState([]);
+  const [myOrders, setMyOrders] = useState([]);
   const [form, setForm] = useState({ fullName: "", phone: "", address: "", avatarUrl: "" });
 
   async function loadData() {
     try {
       setError("");
-      const [userRes, groupsRes] = await Promise.all([
+      const [userRes, groupsRes, ordersRes] = await Promise.all([
         http.get("/api/users/me"),
         http.get("/api/groups/my"),
+        http.get("/api/orders/my"),
       ]);
       setProfile(userRes.data);
       setMyGroups(groupsRes.data || []);
+      setMyOrders(ordersRes.data || []);
       setForm({
         fullName: userRes.data.fullName || "",
         phone: userRes.data.phone || "",
@@ -86,7 +89,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Header */}
-          <div style={{ padding: "0 32px 28px", marginTop: "-60px", display: "flex", alignItems: "flex-end", gap: "20px", flexWrap: "wrap" }}>
+          <div style={{ padding: "0 32px 28px", marginTop: "-60px", display: "flex", alignItems: "flex-end", gap: "20px", flexWrap: "wrap", position: "relative", zIndex: 1 }}>
             <div style={{ width: 110, height: 110, borderRadius: "50%", border: "5px solid #fff", backgroundColor: "#228be6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
               {profile?.avatarUrl ? (
                 <img src={profile.avatarUrl} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -101,6 +104,16 @@ export default function ProfilePage() {
               <p style={{ margin: "4px 0 0", color: "#868e96", fontSize: "0.95rem" }}>
                 {profile?.email} · Member since {new Date(profile?.createdAt).getFullYear()}
               </p>
+              {(profile?.phone || profile?.address) && (
+                <div style={{ marginTop: "8px", display: "flex", flexWrap: "wrap", gap: "12px" }}>
+                  {profile.phone && (
+                    <span style={{ fontSize: "0.85rem", color: "#495057" }}>📞 {profile.phone}</span>
+                  )}
+                  {profile.address && (
+                    <span style={{ fontSize: "0.85rem", color: "#495057" }}>📍 {profile.address}</span>
+                  )}
+                </div>
+              )}
             </div>
             <button
               onClick={() => setIsEditing(!isEditing)}
@@ -166,15 +179,25 @@ export default function ProfilePage() {
             My Groups Activity
           </h2>
           {myGroups.length === 0 ? (
-            <p style={{ color: "#adb5bd", fontStyle: "italic", textAlign: "center", padding: "40px" }}>
-              You haven't joined any groups yet.
-            </p>
+            <div style={{ textAlign: "center", padding: "40px", color: "#adb5bd" }}>
+              <div style={{ fontSize: "2.5rem", marginBottom: "12px" }}>🛍️</div>
+              <p style={{ fontStyle: "italic", marginBottom: "16px" }}>You haven't joined any groups yet.</p>
+              <button onClick={() => router.push("/")} style={{ padding: "10px 22px", background: "#228be6", color: "#fff", border: "none", borderRadius: "10px", fontWeight: "700", cursor: "pointer", fontSize: "0.9rem" }}>
+                Browse Active Deals
+              </button>
+            </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
               {myGroups.map((group) => {
                 const progress = group.progress ?? 0;
                 return (
-                  <div key={group.id} style={{ backgroundColor: "#fff", padding: "18px", borderRadius: "14px", border: "1px solid #f0f0f0", boxShadow: "0 2px 10px rgba(0,0,0,0.04)" }}>
+                  <div
+                    key={group.id}
+                    onClick={() => group.productId && router.push(`/products/${group.productId}`)}
+                    style={{ backgroundColor: "#fff", padding: "18px", borderRadius: "14px", border: "1px solid #f0f0f0", boxShadow: "0 2px 10px rgba(0,0,0,0.04)", cursor: group.productId ? "pointer" : "default", transition: "box-shadow 0.2s" }}
+                    onMouseEnter={(e) => e.currentTarget.style.boxShadow = "0 4px 18px rgba(0,0,0,0.1)"}
+                    onMouseLeave={(e) => e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.04)"}
+                  >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
                       <span style={{ fontWeight: "800", fontSize: "0.95rem", color: "#1a1a1a", lineHeight: "1.3" }}>{group.name}</span>
                       <span style={{ fontSize: "0.7rem", fontWeight: "800", padding: "3px 8px", borderRadius: "6px", whiteSpace: "nowrap", marginLeft: "8px", background: group.isCompleted ? "#ebfbee" : "#e7f5ff", color: group.isCompleted ? "#2f9e44" : "#228be6" }}>
@@ -191,6 +214,52 @@ export default function ProfilePage() {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </section>
+
+        {/* Recent Orders */}
+        <section style={{ marginTop: "32px" }}>
+          <h2 style={{ fontSize: "1.3rem", fontWeight: "900", color: "#1a1a1a", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "20px", borderBottom: "2px solid #000", paddingBottom: "10px" }}>
+            Recent Orders
+          </h2>
+          {myOrders.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px", color: "#adb5bd" }}>
+              <div style={{ fontSize: "2.5rem", marginBottom: "12px" }}>📦</div>
+              <p style={{ fontStyle: "italic" }}>No orders yet.</p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {myOrders.slice(0, 5).map((order) => {
+                const productNames = order.items?.length
+                  ? order.items.map((it) => `${it.product?.name || "Unknown"}${it.quantity > 1 ? ` ×${it.quantity}` : ""}`).join(", ")
+                  : "—";
+                const statusColors = {
+                  completed: { bg: "#ebfbee", color: "#2f9e44" },
+                  pending:   { bg: "#e7f5ff", color: "#228be6" },
+                  cancelled: { bg: "#fff5f5", color: "#fa5252" },
+                };
+                const sc = statusColors[order.status] || { bg: "#f1f3f5", color: "#868e96" };
+                return (
+                  <div key={order.id} style={{ backgroundColor: "#fff", padding: "16px 20px", borderRadius: "14px", border: "1px solid #f0f0f0", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+                    <div style={{ flex: 1, minWidth: "160px" }}>
+                      <div style={{ fontWeight: "700", color: "#1a1a1a", fontSize: "0.9rem", marginBottom: "3px" }}>{productNames}</div>
+                      <div style={{ fontSize: "0.78rem", color: "#adb5bd" }}>{new Date(order.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                    </div>
+                    <span style={{ background: sc.bg, color: sc.color, fontSize: "0.72rem", fontWeight: "800", padding: "3px 10px", borderRadius: "6px", textTransform: "uppercase" }}>
+                      {order.status}
+                    </span>
+                    <div style={{ fontWeight: "800", color: "#228be6", fontSize: "1rem", minWidth: "60px", textAlign: "right" }}>
+                      ₪{Number(order.totalPrice).toLocaleString()}
+                    </div>
+                  </div>
+                );
+              })}
+              {myOrders.length > 5 && (
+                <button onClick={() => router.push("/my-orders")} style={{ alignSelf: "center", padding: "9px 22px", background: "none", border: "1.5px solid #dee2e6", borderRadius: "10px", color: "#228be6", fontWeight: "700", cursor: "pointer", fontSize: "0.875rem" }}>
+                  View all {myOrders.length} orders →
+                </button>
+              )}
             </div>
           )}
         </section>

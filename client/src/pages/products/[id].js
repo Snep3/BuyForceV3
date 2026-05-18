@@ -83,7 +83,8 @@ export default function ProductDetailsPage() {
   }
 
   const src = product.imageUrl ? normalizeImageUrl(product.imageUrl) : "";
-  const activeGroup = product.groups?.find((g) => g.isActive === true);
+  const activeGroup = product.groups?.find((g) => g.isActive === true && g.isCompleted === false);
+  const completedGroup = !activeGroup && product.groups?.find((g) => g.isCompleted === true);
 
   return (
     <div style={pageWrap}>
@@ -140,6 +141,19 @@ export default function ProductDetailsPage() {
                   onClick={() => router.push("/")}
                 >
                   {activeGroup.name}
+                </span>
+              </div>
+            )}
+
+            {/* Completed group */}
+            {completedGroup && (
+              <div style={completedGroupStyle}>
+                <span style={{ fontWeight: "800", color: "#c0392b", fontSize: "0.95rem" }}>
+                  This group deal is now closed
+                </span>
+                <span style={{ fontSize: "0.85rem", color: "#6c5a5a", lineHeight: 1.5 }}>
+                  All spots for <strong>{completedGroup.name}</strong> have been filled.
+                  Check back later — a new group deal for this product may open soon.
                 </span>
               </div>
             )}
@@ -201,6 +215,7 @@ const wishBtnStyle = (active) => ({
   transition: "all 0.2s",
 });
 const activeGroupStyle = { display: "flex", flexDirection: "column", gap: "4px", background: "#e7f5ff", padding: "12px 16px", borderRadius: "10px", border: "1px solid #d0e7ff" };
+const completedGroupStyle = { display: "flex", flexDirection: "column", gap: "6px", background: "#fff5f5", padding: "14px 16px", borderRadius: "10px", border: "1px solid #ffc9c9" };
 const dividerStyle = { height: "1px", background: "#f1f3f5" };
 const descStyle = { fontSize: "1rem", lineHeight: 1.7, color: "#495057", margin: 0 };
 const infoRowStyle = { display: "flex", gap: "0.75rem", alignItems: "center", fontSize: "0.95rem" };

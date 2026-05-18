@@ -159,6 +159,25 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* How it works */}
+      <div style={howItWorksStyle}>
+        <div style={howItWorksInnerStyle}>
+          {[
+            { icon: "🛍️", title: "Browse products", desc: "Explore items available for group buying deals." },
+            { icon: "🤝", title: "Join a group", desc: "Team up with other buyers to hit the minimum headcount." },
+            { icon: "💸", title: "Everyone saves", desc: "Once the group is full, the discount is unlocked for all members." },
+          ].map(({ icon, title, desc }) => (
+            <div key={title} style={howStepStyle}>
+              <span style={{ fontSize: "1.8rem" }}>{icon}</span>
+              <div>
+                <div style={{ fontWeight: "800", color: "#111", fontSize: "0.95rem", marginBottom: "3px" }}>{title}</div>
+                <div style={{ color: "#868e96", fontSize: "0.82rem", lineHeight: 1.5 }}>{desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Groups grid */}
       <main style={{ padding: "3rem 1.5rem", maxWidth: "1400px", margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "2rem" }}>
@@ -405,6 +424,26 @@ const joinBtn = {
   cursor: "pointer",
   fontFamily: "inherit",
   transition: "background 0.2s",
+};
+const howItWorksStyle = {
+  background: "#fff",
+  borderBottom: "1px solid #f1f3f5",
+  padding: "1.25rem 1.5rem",
+};
+const howItWorksInnerStyle = {
+  maxWidth: "1400px",
+  margin: "0 auto",
+  display: "flex",
+  gap: "2rem",
+  justifyContent: "center",
+  flexWrap: "wrap",
+};
+const howStepStyle = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: "12px",
+  maxWidth: "280px",
+  flex: "1 1 200px",
 };
 const leaveBtn = {
   width: "100%",
