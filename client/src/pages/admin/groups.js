@@ -12,6 +12,8 @@ const emptyForm = {
   discountPercent: "",
 };
 
+//comment for testing
+
 export default function AdminGroupsPage() {
   const router = useRouter();
   const [groups, setGroups] = useState([]);
