@@ -96,17 +96,18 @@ export default function MyGroupsPage() {
             <div style={gridStyle}>
               {filtered.map((group) => {
                 const progress = group.progress ?? 0;
-                const isFull = progress >= 100 || group.isCompleted;
+                const goalReached = progress >= 100 || group.isCompleted;
+                const isExpired = group.deadline && new Date(group.deadline) <= new Date();
                 const imageUrl = group.product?.imageUrl || "https://via.placeholder.com/400x250?text=No+Image";
 
                 return (
-                  <div key={group.id} style={cardStyle}>
+                  <div key={group.id} style={{ ...cardStyle, opacity: isExpired ? 0.6 : 1 }}>
                     <div style={imageContainerStyle}>
                       <img src={imageUrl} alt={group.name} style={imageStyle} />
                     </div>
 
-                    <div style={isFull ? fullBadgeStyle : activeBadgeStyle}>
-                      {isFull ? "Completed" : "Active"}
+                    <div style={isExpired ? expiredBadgeStyle : goalReached ? fullBadgeStyle : activeBadgeStyle}>
+                      {isExpired ? "Expired" : goalReached ? "Completed" : "Active"}
                     </div>
 
                     <div style={contentStyle}>
@@ -122,13 +123,21 @@ export default function MyGroupsPage() {
                       )}
 
                       <div style={{ marginTop: "auto" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem", fontWeight: "bold", marginBottom: "8px" }}>
-                          <span>Progress: {group.currentParticipants} / {group.minParticipants}</span>
-                          <span>{progress}%</span>
-                        </div>
-                        <div style={{ backgroundColor: "#e9ecef", height: "12px", borderRadius: "6px", overflow: "hidden" }}>
-                          <div style={{ backgroundColor: isFull ? "#20c997" : "#228be6", height: "100%", width: `${Math.min(progress, 100)}%`, transition: "width 0.6s ease" }} />
-                        </div>
+                        {goalReached ? (
+                          <div style={goalReachedStyle}>
+                            🎉 Goal Reached! {group.currentParticipants} members joined
+                          </div>
+                        ) : (
+                          <>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem", fontWeight: "bold", marginBottom: "8px" }}>
+                              <span>Progress: {group.currentParticipants} / {group.minParticipants}</span>
+                              <span>{progress}%</span>
+                            </div>
+                            <div style={{ backgroundColor: "#e9ecef", height: "12px", borderRadius: "6px", overflow: "hidden" }}>
+                              <div style={{ backgroundColor: "#228be6", height: "100%", width: `${Math.min(progress, 100)}%`, transition: "width 0.6s ease" }} />
+                            </div>
+                          </>
+                        )}
                       </div>
 
                       <div style={{ fontSize: "0.9rem", color: "#555", fontWeight: "600", display: "flex", alignItems: "center", gap: "8px" }}>
@@ -141,20 +150,26 @@ export default function MyGroupsPage() {
                         </div>
                       )}
 
-                      <button
-                        onClick={() => handleLeave(group.id)}
-                        disabled={isFull || leaveLoadingId === group.id}
-                        style={{
-                          width: "100%", padding: "12px",
-                          backgroundColor: isFull ? "#f1f3f5" : "#fff",
-                          color: isFull ? "#adb5bd" : "#ff4d4f",
-                          border: `2px solid ${isFull ? "#dee2e6" : "#ff4d4f"}`,
-                          borderRadius: "8px", cursor: isFull ? "default" : "pointer",
-                          fontWeight: "800", fontSize: "0.9rem", textTransform: "uppercase", marginTop: "10px",
-                        }}
-                      >
-                        {leaveLoadingId === group.id ? "Leaving..." : isFull ? "Completed" : "Leave Group"}
-                      </button>
+                      {isExpired ? (
+                        <button disabled style={{ width: "100%", padding: "12px", backgroundColor: "#f1f3f5", color: "#adb5bd", border: "2px solid #dee2e6", borderRadius: "8px", cursor: "not-allowed", fontWeight: "800", fontSize: "0.9rem", textTransform: "uppercase", marginTop: "10px" }}>
+                          Deal Ended
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleLeave(group.id)}
+                          disabled={goalReached || leaveLoadingId === group.id}
+                          style={{
+                            width: "100%", padding: "12px",
+                            backgroundColor: goalReached ? "#f1f3f5" : "#fff",
+                            color: goalReached ? "#adb5bd" : "#ff4d4f",
+                            border: `2px solid ${goalReached ? "#dee2e6" : "#ff4d4f"}`,
+                            borderRadius: "8px", cursor: goalReached ? "default" : "pointer",
+                            fontWeight: "800", fontSize: "0.9rem", textTransform: "uppercase", marginTop: "10px",
+                          }}
+                        >
+                          {leaveLoadingId === group.id ? "Leaving..." : goalReached ? "Completed" : "Leave Group"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -181,5 +196,7 @@ const imageContainerStyle = { width: "100%", height: "220px", overflow: "hidden"
 const imageStyle = { width: "100%", height: "100%", objectFit: "contain", padding: "8px" };
 const activeBadgeStyle = { position: "absolute", top: "15px", right: "15px", backgroundColor: "#20c997", color: "#fff", padding: "4px 12px", borderRadius: "20px", fontSize: "0.8rem", fontWeight: "bold" };
 const fullBadgeStyle = { ...activeBadgeStyle, backgroundColor: "#f08c00" };
+const expiredBadgeStyle = { ...activeBadgeStyle, backgroundColor: "#868e96" };
+const goalReachedStyle = { background: "#ebfbee", color: "#2f9e44", border: "1px solid #b2f2bb", borderRadius: "10px", padding: "10px 14px", fontWeight: "700", fontSize: "0.9rem", textAlign: "center" };
 const contentStyle = { padding: "1.5rem", flexGrow: 1, display: "flex", flexDirection: "column", gap: "1rem" };
 const titleStyle = { margin: 0, fontSize: "1.4rem", fontWeight: "800", color: "#111" };
