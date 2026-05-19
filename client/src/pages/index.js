@@ -370,7 +370,7 @@ const imgWrapStyle = {
   position: "relative",
   backgroundColor: "#f1f3f5",
 };
-const imgStyle = { width: "100%", height: "100%", objectFit: "cover" };
+const imgStyle = { width: "100%", height: "100%", objectFit: "contain", padding: "8px" };
 const heartBtnStyle = (liked) => ({
   position: "absolute",
   top: "12px",

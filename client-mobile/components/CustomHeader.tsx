@@ -1,20 +1,38 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Platform, StatusBar, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, Platform, StatusBar, TouchableOpacity, Image } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useStore } from '../store/useStore';
+import { API_BASE_URL } from '../src/config/api';
 
 export default function CustomHeader() {
+  const router = useRouter();
+  const { user, isLoggedIn } = useStore();
+
+  const avatarUri = user?.avatarUrl
+    ? (user.avatarUrl.startsWith('http') ? user.avatarUrl : `${API_BASE_URL}/api/products/images/${user.avatarUrl}`)
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || user?.username || 'U')}&background=228be6&color=fff&bold=true`;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       <View style={styles.container}>
-        
-        {/* צד שמאל: לוגו ושם האפליקציה */}
-        <View style={styles.leftContainer}>
-            {/* Placeholder for Logo */}
-            <View style={styles.logoPlaceholder} /> 
-            <Text style={styles.appName}>BuyForce</Text>
-        </View>
+        <Text style={styles.logo}>
+          <Text style={styles.logoAccent}>Buy</Text>Force
+        </Text>
+
+        <TouchableOpacity
+          onPress={() => router.push(isLoggedIn ? '/(tabs)/profile' : '/(auth)/login')}
+          style={styles.avatarButton}
+        >
+          {isLoggedIn ? (
+            <Image source={{ uri: avatarUri }} style={styles.avatar} />
+          ) : (
+            <View style={styles.loginBtn}>
+              <Text style={styles.loginBtnText}>Sign In</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -23,44 +41,48 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#f1f3f5',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   container: {
     height: 60,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between', // דוחף את הצדדים לקצוות
-    paddingHorizontal: 15,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
   },
-  leftContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  logo: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#111',
+    letterSpacing: -0.5,
   },
-  logoPlaceholder: {
-    width: 30,
-    height: 30,
-    borderRadius: 5,
-    backgroundColor: '#2f95dc',
-    marginRight: 10,
+  logoAccent: {
+    color: '#228be6',
   },
-  appName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+  avatarButton: {
+    padding: 2,
   },
-  notificationButton: {
-    padding: 5,
-    position: 'relative',
+  avatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 2,
+    borderColor: '#e9ecef',
   },
-  badge: {
-    position: 'absolute',
-    top: 5,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'red',
-    borderWidth: 1,
-    borderColor: '#fff',
+  loginBtn: {
+    backgroundColor: '#228be6',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+  },
+  loginBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

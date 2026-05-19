@@ -30,6 +30,16 @@ html, body {
   overflow-x: hidden;
 }
 
+html.dark-mode {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+html.dark-mode img,
+html.dark-mode video,
+html.dark-mode iframe {
+  filter: invert(1) hue-rotate(180deg);
+}
+
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   color: var(--gray-900);

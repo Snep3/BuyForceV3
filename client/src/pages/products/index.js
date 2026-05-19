@@ -354,7 +354,7 @@ const imgWrapStyle = {
   overflow: "hidden",
   background: "#f1f3f5",
 };
-const imgStyle = { width: "100%", height: "100%", objectFit: "cover" };
+const imgStyle = { width: "100%", height: "100%", objectFit: "contain", padding: "8px" };
 const noImgStyle = {
   width: "100%",
   height: "100%",

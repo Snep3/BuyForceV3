@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
+import { IsOptional, IsString, IsUrl, MaxLength, ValidateIf } from 'class-validator';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -17,7 +17,8 @@ export class UpdateProfileDto {
   address?: string;
 
   @IsOptional()
+  @ValidateIf((o) => o.avatarUrl !== '' && o.avatarUrl != null)
   @IsUrl()
   @MaxLength(500)
-  avatarUrl?: string;
+  avatarUrl?: string | null;
 }

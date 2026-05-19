@@ -115,7 +115,7 @@ export default function NotificationsScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2f95dc" />
+        <ActivityIndicator size="large" color="#228be6" />
       </View>
     );
   }
@@ -153,7 +153,7 @@ export default function NotificationsScreen() {
                 <Ionicons 
                   name={getIconName(item.type)} 
                   size={22} 
-                  color={item.isRead ? "#94a3b8" : "#2f95dc"} 
+                  color={item.isRead ? "#94a3b8" : "#228be6"} 
                 />
               </View>
               <View style={styles.textContainer}>
@@ -237,15 +237,15 @@ const styles = StyleSheet.create({
     width: 8, 
     height: 8, 
     borderRadius: 4, 
-    backgroundColor: '#2f95dc' 
+    backgroundColor: '#228be6' 
   },
   deleteButton: { padding: 10 },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40, marginTop: 100 },
   iconCircle: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#f9fafb', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   emptyTitle: { fontSize: 20, fontWeight: 'bold', color: '#333', marginBottom: 10 },
   emptySubtitle: { fontSize: 16, color: '#9ca3af', textAlign: 'center', lineHeight: 24, marginBottom: 30 },
-  browseButton: { backgroundColor: '#2f95dc', paddingVertical: 14, paddingHorizontal: 32, borderRadius: 12, width: '100%', alignItems: 'center' },
+  browseButton: { backgroundColor: '#228be6', paddingVertical: 14, paddingHorizontal: 32, borderRadius: 12, width: '100%', alignItems: 'center' },
   browseButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  loginButton: { backgroundColor: '#2f95dc', paddingVertical: 12, paddingHorizontal: 30, borderRadius: 25, marginTop: 20 },
+  loginButton: { backgroundColor: '#228be6', paddingVertical: 12, paddingHorizontal: 30, borderRadius: 25, marginTop: 20 },
   loginButtonText: { color: '#fff', fontWeight: 'bold' }
 });

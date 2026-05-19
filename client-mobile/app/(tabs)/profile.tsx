@@ -1,221 +1,420 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  Image, 
-  TouchableOpacity, 
-  ScrollView, 
-  Switch, 
-  Alert 
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  TextInput,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useStore } from '../../store/useStore';
 import { API_BASE_URL } from '../../src/config/api';
 
-type MenuRowProps = {
-  icon: string;
-  label: string;
-  value?: string;
-  onPress?: () => void;
-  isDestructive?: boolean;
-  showChevron?: boolean;
+const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
+  completed:  { bg: '#ebfbee', color: '#2f9e44' },
+  pending:    { bg: '#e7f5ff', color: '#228be6' },
+  cancelled:  { bg: '#fff5f5', color: '#fa5252' },
 };
-
-// רכיב שורה בתפריט לשימוש חוזר
-const MenuRow = ({ icon, label, value, onPress, isDestructive = false, showChevron = true }: MenuRowProps) => (
-  <TouchableOpacity style={styles.menuRow} onPress={onPress} activeOpacity={0.7}>
-    <View style={[styles.iconContainer, isDestructive && styles.destructiveIconBg]}>
-      <Ionicons name={icon as any} size={20} color={isDestructive ? '#ef4444' : '#333'} />
-    </View>
-    <View style={styles.menuContent}>
-      <Text style={[styles.menuLabel, isDestructive && styles.destructiveText]}>{label}</Text>
-      {value && <Text style={styles.menuValue}>{value}</Text>}
-    </View>
-    {showChevron && (
-      <Ionicons name="chevron-forward" size={20} color="#ccc" />
-    )}
-  </TouchableOpacity>
-);
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, logout } = useStore(); // שליפת המשתמש מה-Store
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const { token, user, logout } = useStore();
 
-  const handleLogout = () => {
-    Alert.alert(
-      "Log Out",
-      "Are you sure you want to log out?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Log Out", 
-          style: "destructive",
-          onPress: () => {
-            logout();
-            router.replace('/login' as any);
-          } 
-        }
-      ]
-    );
+  const [profile, setProfile]   = useState<any>(null);
+  const [myGroups, setMyGroups] = useState<any[]>([]);
+  const [myOrders, setMyOrders] = useState<any[]>([]);
+  const [loading, setLoading]   = useState(true);
+
+  const [groupsOpen, setGroupsOpen] = useState(false);
+  const [ordersOpen, setOrdersOpen] = useState(false);
+  const [groupSearch, setGroupSearch] = useState('');
+  const [orderSearch, setOrderSearch] = useState('');
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ fullName: '', phone: '', address: '', avatarUrl: '' });
+
+  useEffect(() => {
+    if (!token) { setLoading(false); return; }
+    void loadData();
+  }, [token]);
+
+  const loadData = async () => {
+    try {
+      const [userRes, groupsRes, ordersRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/users/me`,    { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE_URL}/api/groups/my`,   { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE_URL}/api/orders/my`,   { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      if (userRes.ok) {
+        const u = await userRes.json();
+        setProfile(u);
+        setForm({ fullName: u.fullName || '', phone: u.phone || '', address: u.address || '', avatarUrl: u.avatarUrl || '' });
+      }
+      if (groupsRes.ok) setMyGroups(await groupsRes.json());
+      if (ordersRes.ok) setMyOrders(await ordersRes.json());
+    } catch {
+      // show whatever we have from store
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // לוגיקת תמונת פרופיל או אווטאר גנרי
-  const avatarUri = user?.avatarUrl 
-    ? (user.avatarUrl.startsWith('http') ? user.avatarUrl : `${API_BASE_URL}/api/products/images/${user.avatarUrl}`)
-    : `https://ui-avatars.com/api/?name=${user?.fullName || user?.username || 'User'}&background=2f95dc&color=fff`;
+  const handleSave = async () => {
+    const original = {
+      fullName:  profile?.fullName  || '',
+      phone:     profile?.phone     || '',
+      address:   profile?.address   || '',
+      avatarUrl: profile?.avatarUrl || '',
+    };
+    const changes = Object.fromEntries(
+      Object.entries(form).filter(([k, v]) => v !== original[k as keyof typeof original])
+    );
+    if (Object.keys(changes).length === 0) { setIsEditing(false); return; }
+    setSaving(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/users/me`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(changes),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      setProfile((prev: any) => ({ ...prev, ...changes }));
+      setForm(f => ({ ...f, ...Object.fromEntries(Object.entries(changes).map(([k, v]) => [k, v ?? ''])) }));
+      setIsEditing(false);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to save changes');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLogout = () => {
+    Alert.alert('Log Out', 'Are you sure you want to log out?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Log Out', style: 'destructive', onPress: () => { logout(); router.replace('/(auth)/login'); } },
+    ]);
+  };
+
+  if (!token) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.guestTitle}>You're not logged in</Text>
+        <TouchableOpacity style={styles.loginBtn} onPress={() => router.push('/(auth)/login')}>
+          <Text style={styles.loginBtnText}>Sign In</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (loading) return <ActivityIndicator style={{ flex: 1 }} size="large" color="#228be6" />;
+
+  const displayName  = profile?.fullName || profile?.username || user?.fullName || user?.username || 'User';
+  const email        = profile?.email || user?.email || '';
+  const initials     = displayName.slice(0, 2).toUpperCase();
+  const memberYear   = profile?.createdAt ? new Date(profile.createdAt).getFullYear() : null;
+  const filteredGroups = myGroups.filter(g =>
+    g.name?.toLowerCase().includes(groupSearch.toLowerCase())
+  );
+
+  const filteredOrders = myOrders.filter(order => {
+    const q = orderSearch.toLowerCase();
+    return order.items?.some((it: any) => it.product?.name?.toLowerCase().includes(q));
+  });
+
+  const activeGroups    = myGroups.filter(g => !g.isCompleted).length;
+  const completedGroups = myGroups.filter(g => g.isCompleted).length;
+
+  const stats = [
+    { label: 'Groups Joined', value: myGroups.length },
+    { label: 'Active',        value: activeGroups },
+    { label: 'Completed',     value: completedGroups },
+  ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <KeyboardAwareScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scroll}
+      keyboardShouldPersistTaps="handled"
+      enableOnAndroid
+      extraScrollHeight={120}
+    >
 
-        {/* 1. User Header - נתונים אמיתיים מה-Store */}
+      {/* ── Profile Card ── */}
+      <View style={styles.card}>
+        <LinearGradient colors={['#228be6', '#15aabf']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cover} />
+
         <View style={styles.header}>
-          <Image source={{ uri: avatarUri }} style={styles.avatar} />
-          <Text style={styles.userName}>{user?.fullName || user?.username || 'Guest User'}</Text>
-          <Text style={styles.userEmail}>{user?.email || 'No email connected'}</Text>
-          <TouchableOpacity 
-            style={styles.editButton}
-            onPress={() => Alert.alert("Edit Profile", "Profile editing feature coming soon.")}
-          >
-            <Text style={styles.editButtonText}>Edit Profile</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* 2. Account Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account & Payment</Text>
-          
-          <MenuRow 
-            icon="logo-paypal" 
-            label="PayPal Settings" 
-            value="Manage payment methods"
-            onPress={() => Alert.alert("PayPal", "You will be redirected to PayPal to manage your account.")}
-          />
-
-          <MenuRow 
-            icon="location-outline" 
-            label="Shipping Address" 
-            value={user?.address || "Add address"}
-            onPress={() => console.log("Nav to Address")} 
-          />
-        </View>
-
-        {/* 3. Settings Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Settings</Text>
-          <View style={styles.menuRow}>
-            <View style={styles.iconContainer}>
-              <Ionicons name="notifications-outline" size={20} color="#333" />
-            </View>
-            <View style={styles.menuContent}>
-              <Text style={styles.menuLabel}>Push Notifications</Text>
-            </View>
-            <Switch 
-              value={notificationsEnabled}
-              onValueChange={setNotificationsEnabled}
-              trackColor={{ false: '#e5e7eb', true: '#2f95dc' }}
-            />
+          <View style={styles.avatarWrap}>
+            {profile?.avatarUrl ? (
+              <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImg} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarInitials}>{initials}</Text>
+              </View>
+            )}
           </View>
-          <MenuRow 
-            icon="globe-outline" 
-            label="Language" 
-            value="English"
-            onPress={() => console.log("Change Language")} 
-          />
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>{displayName}</Text>
+            <Text style={styles.userEmail}>{email}{memberYear ? ` · Member since ${memberYear}` : ''}</Text>
+            {profile?.phone   && <Text style={styles.userMeta}>📞 {profile.phone}</Text>}
+            {profile?.address && <Text style={styles.userMeta}>📍 {profile.address}</Text>}
+            <TouchableOpacity style={styles.editBtn} onPress={() => setIsEditing(e => !e)}>
+              <Text style={styles.editBtnText}>{isEditing ? 'Cancel' : 'Edit Profile'}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* 4. Support */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Support</Text>
-          <MenuRow 
-            icon="help-circle-outline" 
-            label="Help Center" 
-            onPress={() => console.log("Help")} 
-          />
+        <View style={styles.statsRow}>
+          {stats.map((s, i) => (
+            <View key={s.label} style={[styles.statCell, i < 2 && styles.statDivider]}>
+              <Text style={styles.statValue}>{s.value}</Text>
+              <Text style={styles.statLabel}>{s.label}</Text>
+            </View>
+          ))}
         </View>
 
-        {/* 5. Logout */}
-        <View style={[styles.section, styles.lastSection]}>
-          <MenuRow 
-            icon="log-out-outline" 
-            label="Log Out" 
-            isDestructive 
-            showChevron={false}
-            onPress={handleLogout} 
-          />
-        </View>
+        {isEditing && (
+          <View style={styles.editForm}>
+            {[
+              { label: 'Full Name',  key: 'fullName',  placeholder: 'Your full name' },
+              { label: 'Phone',      key: 'phone',     placeholder: '+1 234 567 8900' },
+              { label: 'Address',    key: 'address',   placeholder: 'Your address' },
+              { label: 'Avatar URL', key: 'avatarUrl', placeholder: 'https://...' },
+            ].map(({ label, key, placeholder }) => (
+              <View key={key} style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>{label}</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={form[key as keyof typeof form]}
+                  onChangeText={t => setForm(f => ({ ...f, [key]: t }))}
+                  placeholder={placeholder}
+                  placeholderTextColor="#adb5bd"
+                  autoCapitalize="none"
+                />
+              </View>
+            ))}
 
-        <Text style={styles.versionText}>BuyForce Version 1.0.0 (MVP)</Text>
+            <TouchableOpacity
+              style={[styles.saveBtn, saving && { opacity: 0.6 }]}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              <Text style={styles.saveBtnText}>{saving ? 'Saving...' : 'Save Changes'}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
 
-      </ScrollView>
-    </SafeAreaView>
+      {/* ── My Groups (collapsible) ── */}
+      <View style={styles.section}>
+        <TouchableOpacity style={styles.sectionHeader} onPress={() => setGroupsOpen(o => !o)} activeOpacity={0.7}>
+          <Text style={styles.sectionTitle}>My Groups Activity</Text>
+          <Ionicons name={groupsOpen ? 'chevron-up' : 'chevron-down'} size={20} color="#868e96" />
+        </TouchableOpacity>
+
+        {groupsOpen && (
+          myGroups.length === 0 ? (
+            <View style={styles.emptySection}>
+              <Text style={styles.emptyText}>You haven't joined any groups yet.</Text>
+              <TouchableOpacity style={styles.emptyBtn} onPress={() => router.push('/(tabs)')}>
+                <Text style={styles.emptyBtnText}>Browse Active Deals</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.sectionBody}>
+              <View style={styles.searchBox}>
+                <Ionicons name="search" size={15} color="#adb5bd" />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search groups..."
+                  placeholderTextColor="#adb5bd"
+                  value={groupSearch}
+                  onChangeText={setGroupSearch}
+                />
+                {groupSearch.length > 0 && (
+                  <TouchableOpacity onPress={() => setGroupSearch('')}>
+                    <Ionicons name="close-circle" size={16} color="#adb5bd" />
+                  </TouchableOpacity>
+                )}
+              </View>
+              {filteredGroups.length === 0 ? (
+                <Text style={[styles.emptyText, { paddingVertical: 16 }]}>No groups match "{groupSearch}"</Text>
+              ) : filteredGroups.map(group => {
+                const pct = Math.min(group.progress ?? 0, 100);
+                return (
+                  <TouchableOpacity
+                    key={group.id}
+                    style={styles.groupRow}
+                    onPress={() => group.productId && router.push(`/product/${group.productId}`)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.groupRowTop}>
+                      <Text style={styles.groupName} numberOfLines={1}>{group.name}</Text>
+                      <View style={[styles.badge, { backgroundColor: group.isCompleted ? '#ebfbee' : '#e7f5ff' }]}>
+                        <Text style={[styles.badgeText, { color: group.isCompleted ? '#2f9e44' : '#228be6' }]}>
+                          {group.isCompleted ? 'Completed' : 'Active'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.progressBg}>
+                      <View style={[styles.progressFill, { width: `${pct}%` as any, backgroundColor: group.isCompleted ? '#20c997' : '#228be6' }]} />
+                    </View>
+                    <View style={styles.groupRowBottom}>
+                      <Text style={styles.groupMeta}>{group.currentParticipants}/{group.minParticipants} members</Text>
+                      <Text style={[styles.groupPct, { color: group.isCompleted ? '#20c997' : '#228be6' }]}>{pct}%</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )
+        )}
+      </View>
+
+      {/* ── Recent Orders (collapsible) ── */}
+      <View style={styles.section}>
+        <TouchableOpacity style={styles.sectionHeader} onPress={() => setOrdersOpen(o => !o)} activeOpacity={0.7}>
+          <Text style={styles.sectionTitle}>Recent Orders</Text>
+          <Ionicons name={ordersOpen ? 'chevron-up' : 'chevron-down'} size={20} color="#868e96" />
+        </TouchableOpacity>
+
+        {ordersOpen && (
+          myOrders.length === 0 ? (
+            <View style={styles.emptySection}>
+              <Text style={styles.emptyText}>No orders yet.</Text>
+            </View>
+          ) : (
+            <View style={styles.sectionBody}>
+              <View style={styles.searchBox}>
+                <Ionicons name="search" size={15} color="#adb5bd" />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search orders..."
+                  placeholderTextColor="#adb5bd"
+                  value={orderSearch}
+                  onChangeText={setOrderSearch}
+                />
+                {orderSearch.length > 0 && (
+                  <TouchableOpacity onPress={() => setOrderSearch('')}>
+                    <Ionicons name="close-circle" size={16} color="#adb5bd" />
+                  </TouchableOpacity>
+                )}
+              </View>
+              {filteredOrders.length === 0 ? (
+                <Text style={[styles.emptyText, { paddingVertical: 16 }]}>No orders match "{orderSearch}"</Text>
+              ) : filteredOrders.slice(0, 10).map(order => {
+                const productNames = order.items?.length
+                  ? order.items.map((it: any) => `${it.product?.name || 'Unknown'}${it.quantity > 1 ? ` ×${it.quantity}` : ''}`).join(', ')
+                  : '—';
+                const sc = STATUS_COLORS[order.status] ?? { bg: '#f1f3f5', color: '#868e96' };
+                return (
+                  <View key={order.id} style={styles.orderRow}>
+                    <View style={styles.orderInfo}>
+                      <Text style={styles.orderName} numberOfLines={1}>{productNames}</Text>
+                      <Text style={styles.orderDate}>
+                        {new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </Text>
+                    </View>
+                    <View style={[styles.badge, { backgroundColor: sc.bg }]}>
+                      <Text style={[styles.badgeText, { color: sc.color }]}>{order.status}</Text>
+                    </View>
+                    <Text style={styles.orderPrice}>₪{Number(order.totalPrice).toLocaleString()}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          )
+        )}
+      </View>
+
+      {/* ── Logout ── */}
+      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+        <Text style={styles.logoutText}>Log Out</Text>
+      </TouchableOpacity>
+
+    </KeyboardAwareScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
-  scrollContent: { paddingBottom: 40 },
-  header: { 
-    alignItems: 'center', 
-    paddingVertical: 30, 
-    backgroundColor: '#fff', 
-    marginBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0'
-  },
-  avatar: { width: 90, height: 90, borderRadius: 45, marginBottom: 12, backgroundColor: '#eee' },
-  userName: { fontSize: 22, fontWeight: 'bold', color: '#111' },
-  userEmail: { fontSize: 14, color: '#666', marginBottom: 16 },
-  editButton: { 
-    paddingVertical: 8, 
-    paddingHorizontal: 16, 
-    borderRadius: 20, 
-    borderWidth: 1, 
-    borderColor: '#e5e7eb' 
-  },
-  editButtonText: { fontSize: 13, fontWeight: '600', color: '#333' },
-  section: { 
-    backgroundColor: '#fff', 
-    marginBottom: 20, 
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#f0f0f0'
-  },
-  lastSection: { marginBottom: 0 },
-  sectionTitle: { 
-    fontSize: 12, 
-    fontWeight: '700', 
-    color: '#9ca3af', 
-    textTransform: 'uppercase', 
-    marginLeft: 20, 
-    marginBottom: 8, 
-    marginTop: 8 
-  },
-  menuRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    paddingVertical: 12, 
-    paddingHorizontal: 20,
-    backgroundColor: '#fff'
-  },
-  iconContainer: { 
-    width: 36, 
-    height: 36, 
-    borderRadius: 10, 
-    backgroundColor: '#f3f4f6', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    marginRight: 16 
-  },
-  menuContent: { flex: 1 },
-  menuLabel: { fontSize: 16, color: '#1f2937' },
-  menuValue: { fontSize: 14, color: '#9ca3af', marginTop: 2 },
-  destructiveText: { color: '#ef4444', fontWeight: '600' },
-  destructiveIconBg: { backgroundColor: '#fee2e2' },
-  versionText: { textAlign: 'center', color: '#ccc', fontSize: 12, marginTop: 30 }
+  container: { flex: 1, backgroundColor: '#f4f7f6' },
+  scroll:    { padding: 20, paddingBottom: 40 },
+  center:    { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16 },
+
+  // Profile card
+  card: { backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 24, elevation: 4, marginBottom: 16 },
+  cover: { height: 120 },
+  header: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 20, paddingBottom: 20, marginTop: -50, gap: 14 },
+  avatarWrap: { width: 90, height: 90, borderRadius: 45, borderWidth: 4, borderColor: '#fff', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 5 },
+  avatarImg: { width: '100%', height: '100%' },
+  avatarFallback: { width: '100%', height: '100%', backgroundColor: '#228be6', justifyContent: 'center', alignItems: 'center' },
+  avatarInitials: { fontSize: 28, fontWeight: '900', color: '#fff' },
+  userInfo: { flex: 1, paddingBottom: 4 },
+  userName:  { fontSize: 20, fontWeight: '900', color: '#1a1a1a', marginBottom: 3 },
+  userEmail: { fontSize: 13, color: '#868e96' },
+  userMeta:  { fontSize: 13, color: '#495057', marginTop: 4 },
+  statsRow:  { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#f0f0f0' },
+  statCell:  { flex: 1, paddingVertical: 18, alignItems: 'center' },
+  statDivider: { borderRightWidth: 1, borderRightColor: '#f0f0f0' },
+  statValue: { fontSize: 26, fontWeight: '900', color: '#228be6', marginBottom: 4 },
+  statLabel: { fontSize: 10, fontWeight: '700', color: '#868e96', textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'center' },
+
+  editBtn:     { marginTop: 10, paddingVertical: 7, paddingHorizontal: 16, borderRadius: 8, borderWidth: 1.5, borderColor: '#dee2e6', alignSelf: 'flex-start' },
+  editBtnText: { fontSize: 13, fontWeight: '700', color: '#228be6' },
+
+  editForm:   { borderTopWidth: 1, borderTopColor: '#f0f0f0', padding: 20, gap: 14 },
+  fieldGroup: { gap: 6 },
+  fieldLabel: { fontSize: 11, fontWeight: '800', color: '#868e96', textTransform: 'uppercase', letterSpacing: 0.5 },
+  fieldInput: { borderWidth: 1.5, borderColor: '#dee2e6', borderRadius: 10, padding: 12, fontSize: 15, color: '#111' },
+  saveBtn:    { backgroundColor: '#228be6', borderRadius: 10, padding: 14, alignItems: 'center', marginTop: 4 },
+  saveBtnText:{ color: '#fff', fontWeight: '800', fontSize: 15 },
+
+  // Collapsible sections
+  section:       { backgroundColor: '#fff', borderRadius: 16, marginBottom: 12, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 18 },
+  sectionTitle:  { fontSize: 15, fontWeight: '900', color: '#1a1a1a', textTransform: 'uppercase', letterSpacing: 0.5 },
+  sectionBody:   { paddingHorizontal: 16, paddingBottom: 12 },
+
+  // Groups
+  groupRow:    { backgroundColor: '#f8f9fa', borderRadius: 12, padding: 14, marginBottom: 10 },
+  groupRowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  groupName:   { fontSize: 14, fontWeight: '800', color: '#1a1a1a', flex: 1, marginRight: 8 },
+  progressBg:  { height: 8, backgroundColor: '#e9ecef', borderRadius: 4, overflow: 'hidden', marginBottom: 6 },
+  progressFill:{ height: '100%', borderRadius: 4 },
+  groupRowBottom: { flexDirection: 'row', justifyContent: 'space-between' },
+  groupMeta:   { fontSize: 12, color: '#868e96' },
+  groupPct:    { fontSize: 12, fontWeight: '700' },
+
+  // Orders
+  orderRow:    { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f0f0f0', gap: 10 },
+  orderInfo:   { flex: 1 },
+  orderName:   { fontSize: 14, fontWeight: '700', color: '#1a1a1a', marginBottom: 3 },
+  orderDate:   { fontSize: 12, color: '#adb5bd' },
+  orderPrice:  { fontSize: 15, fontWeight: '800', color: '#228be6', minWidth: 60, textAlign: 'right' },
+
+  // Shared
+  badge:     { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  badgeText: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+
+  searchBox:   { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8f9fa', borderWidth: 1, borderColor: '#e9ecef', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 12, gap: 8 },
+  searchInput: { flex: 1, fontSize: 14, color: '#212529' },
+
+  emptySection: { padding: 20, alignItems: 'center', gap: 12 },
+  emptyText:    { color: '#adb5bd', fontSize: 14, fontStyle: 'italic' },
+  emptyBtn:     { backgroundColor: '#228be6', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
+  emptyBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+
+  logoutBtn:  { borderRadius: 12, borderWidth: 1.5, borderColor: '#fa5252', paddingVertical: 16, alignItems: 'center', marginTop: 4 },
+  logoutText: { color: '#fa5252', fontWeight: '800', fontSize: 15 },
+
+  guestTitle:    { fontSize: 18, fontWeight: '700', color: '#495057' },
+  loginBtn:      { backgroundColor: '#228be6', paddingVertical: 12, paddingHorizontal: 28, borderRadius: 10 },
+  loginBtnText:  { color: '#fff', fontWeight: '800', fontSize: 15 },
 });

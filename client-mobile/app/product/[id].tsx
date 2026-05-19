@@ -17,7 +17,7 @@ export default function ProductDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const { toggleWishlist, isWishlisted, joinGroup, leaveGroup, hasJoined, token, fetchWishlist } = useStore();
+  const { toggleWishlist, isWishlisted, joinGroup, leaveGroup, hasJoined, token, fetchWishlist, fetchJoinedGroups } = useStore();
   const productId = typeof id === 'string' ? id : '';
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export default function ProductDetailsScreen() {
         const data = await response.json();
         setProduct(data);
 
-        if (token) await fetchWishlist();
+        if (token) await Promise.all([fetchWishlist(), fetchJoinedGroups()]);
       } catch (error) {
         console.error("Init error:", error);
         Alert.alert("Error", "Could not load details.");
@@ -56,7 +56,7 @@ export default function ProductDetailsScreen() {
   const isInWishlist = isWishlisted(productId);
   const isJoined = activeGroup ? hasJoined(activeGroup.id) : false;
 
-  const joinedCount = activeGroup?.members?.length || 0;
+  const joinedCount = activeGroup?.currentParticipants ?? activeGroup?.members?.length ?? 0;
   const targetCount = activeGroup?.minParticipants || 0;
   const progressPercent = targetCount > 0 ? Math.round((joinedCount / targetCount) * 100) : 0;
   
@@ -118,7 +118,7 @@ export default function ProductDetailsScreen() {
     }
   };
 
-  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#2f95dc" /></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#228be6" /></View>;
 
   return (
     <View style={styles.container}>
@@ -148,7 +148,7 @@ export default function ProductDetailsScreen() {
               <View style={styles.progressRow}>
                 <Text style={styles.progressLabel}>Current Progress</Text>
                 <Text style={styles.progressValue}>
-                  <Text style={{fontWeight: 'bold', color: '#2f95dc'}}>{joinedCount}</Text>/{targetCount} joined
+                  <Text style={{fontWeight: 'bold', color: '#228be6'}}>{joinedCount}</Text>/{targetCount} joined
                 </Text>
               </View>
               <View style={styles.progressBarBg}>
@@ -212,14 +212,14 @@ const styles = StyleSheet.create({
   priceBlock: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8fafc', padding: 16, borderRadius: 20, marginBottom: 24 },
   divider: { width: 1, height: 40, backgroundColor: '#e2e8f0', marginHorizontal: 20 },
   label: { fontSize: 12, color: '#64748b', marginBottom: 4 },
-  groupPrice: { fontSize: 24, fontWeight: '900', color: '#2f95dc' },
+  groupPrice: { fontSize: 24, fontWeight: '900', color: '#228be6' },
   regularPrice: { fontSize: 18, color: '#94a3b8', textDecorationLine: 'line-through' },
   progressSection: { marginBottom: 24 },
   progressRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
   progressLabel: { fontSize: 14, fontWeight: '700', color: '#334155' },
   progressValue: { fontSize: 14, color: '#64748b' },
   progressBarBg: { height: 10, backgroundColor: '#f1f5f9', borderRadius: 5, overflow: 'hidden' },
-  progressBarFill: { height: '100%', backgroundColor: '#2f95dc', borderRadius: 5 },
+  progressBarFill: { height: '100%', backgroundColor: '#228be6', borderRadius: 5 },
   noGroupBanner: { padding: 15, backgroundColor: '#fff1f0', borderRadius: 12, marginBottom: 20 },
   noGroupText: { color: '#cf1322', textAlign: 'center', fontWeight: '600' },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1e293b', marginBottom: 10 },
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   footerContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24 },
   footerLabel: { fontSize: 11, color: '#94a3b8' },
   footerPrice: { fontSize: 22, fontWeight: '900', color: '#1e293b' },
-  joinButton: { backgroundColor: '#2f95dc', paddingVertical: 16, paddingHorizontal: 32, borderRadius: 16, minWidth: 150, alignItems: 'center' },
+  joinButton: { backgroundColor: '#228be6', paddingVertical: 16, paddingHorizontal: 32, borderRadius: 16, minWidth: 150, alignItems: 'center' },
   leaveButton: { backgroundColor: '#ef4444' },
   disabledButton: { backgroundColor: '#cbd5e1' },
   joinButtonText: { color: '#fff', fontWeight: '800', fontSize: 16 },
