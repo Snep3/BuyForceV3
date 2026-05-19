@@ -27,7 +27,10 @@
       "Bash(curl -s -X POST http://localhost:4000/api/products -H 'Content-Type: application/json' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImJkYzZkNGY3LWYwMjAtNDEzNS1hNWE2LTk0NjY5YjVhM2FiMiIsImlzX2FkbWluIjp0cnVlLCJpYXQiOjE3NzkwOTUxMDEsImV4cCI6MTc3OTY5OTkwMX0.W5VoaSRoUwUDBtRZ3FLH4dMzbOoPTqOAWnkLA9pHCzI' -d '{\"name\":\"A\",\"price\":10,\"category\":\"B\",\"imageUrl\":\"http://192.168.1.1/image.jpg\"}')",
       "Bash(curl -s -X POST http://localhost:4000/api/products -H 'Content-Type: application/json' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImJkYzZkNGY3LWYwMjAtNDEzNS1hNWE2LTk0NjY5YjVhM2FiMiIsImlzX2FkbWluIjp0cnVlLCJpYXQiOjE3NzkwOTUxMDEsImV4cCI6MTc3OTY5OTkwMX0.W5VoaSRoUwUDBtRZ3FLH4dMzbOoPTqOAWnkLA9pHCzI' -d '{\"name\":\"A\",\"price\":10,\"category\":\"B\",\"imageUrl\":\"https://images.pexels.com/photos/123456/pexels-photo-123456.jpeg?auto=compress&cs=tinysrgb&w=800\"}')",
       "Bash(curl -s -X POST http://localhost:4000/api/admin/groups -H 'Content-Type: application/json' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImJkYzZkNGY3LWYwMjAtNDEzNS1hNWE2LTk0NjY5YjVhM2FiMiIsImlzX2FkbWluIjp0cnVlLCJpYXQiOjE3NzkwOTUxMDEsImV4cCI6MTc3OTY5OTkwMX0.W5VoaSRoUwUDBtRZ3FLH4dMzbOoPTqOAWnkLA9pHCzI' -d '{\"name\":\"Test Group\",\"productId\":\"not-a-uuid\",\"minParticipants\":5,\"isActive\":true}')",
-      "Bash(curl -s -X POST http://localhost:4000/api/admin/groups -H 'Content-Type: application/json' -H 'Authorization: Bearer __TRACKED_VAR__' -d '{\"name\":\"Test Group\",\"productId\":\"not-a-uuid\",\"minParticipants\":5,\"isActive\":true}')"
+      "Bash(curl -s -X POST http://localhost:4000/api/admin/groups -H 'Content-Type: application/json' -H 'Authorization: Bearer __TRACKED_VAR__' -d '{\"name\":\"Test Group\",\"productId\":\"not-a-uuid\",\"minParticipants\":5,\"isActive\":true}')",
+      "Read(//c/Users/gavri/.claude/projects/c--Users-gavri-Documents-GitHub-BuyForce-project-BuyForce-V2/memory/**)",
+      "Bash(npx expo *)",
+      "Bash(npm install *)"
     ]
   }
 }

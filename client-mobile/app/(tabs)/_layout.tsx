@@ -3,7 +3,6 @@ import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useStore } from "../../store/useStore";
 import CustomHeader from "../../components/CustomHeader";
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
   const isLoggedIn = useStore((state) => state.isLoggedIn);
@@ -19,7 +18,7 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#2f95dc",
+        tabBarActiveTintColor: "#228be6",
         tabBarInactiveTintColor: "gray",
         header: () => <CustomHeader />,
       }}
@@ -33,32 +32,26 @@ export default function TabLayout() {
           ),
         }}
       />
-      
-      {/* תוקן: groups מופיע כעת פעם אחת בלבד */}
+
       <Tabs.Screen
-        name="groups"
+        name="products"
         options={{
-          title: "My Groups",
+          title: "Products",
           tabBarIcon: ({ color }) => (
-            <Ionicons name="people" size={24} color={color} />
+            <Ionicons name="grid-outline" size={24} color={color} />
           ),
-        }}
-        listeners={{
-          tabPress: (e) => guardTabPress(e),
         }}
       />
 
       <Tabs.Screen
         name="notifications"
         options={{
-          title: "Notifications",
+          title: "Alerts",
           tabBarIcon: ({ color }) => (
-            <Ionicons name="notifications" size={24} color={color} />
+            <Ionicons name="notifications-outline" size={24} color={color} />
           ),
         }}
-        listeners={{
-          tabPress: (e) => guardTabPress(e),
-        }}
+        listeners={{ tabPress: guardTabPress }}
       />
 
       <Tabs.Screen
@@ -66,25 +59,27 @@ export default function TabLayout() {
         options={{
           title: "Wishlist",
           tabBarIcon: ({ color }) => (
-            <Ionicons name="heart" size={24} color={color} />
+            <Ionicons name="heart-outline" size={24} color={color} />
           ),
         }}
-        listeners={{
-          tabPress: (e) => guardTabPress(e),
-        }}
+        listeners={{ tabPress: guardTabPress }}
       />
 
       <Tabs.Screen
-        name="profile"
+        name="groups"
         options={{
-          title: "Profile",
+          title: "My Groups",
           tabBarIcon: ({ color }) => (
-            <Ionicons name="person" size={24} color={color} />
+            <Ionicons name="people-outline" size={24} color={color} />
           ),
         }}
-        listeners={{
-          tabPress: (e) => guardTabPress(e),
-        }}
+        listeners={{ tabPress: guardTabPress }}
+      />
+
+      {/* Keep profile routable but off the tab bar */}
+      <Tabs.Screen
+        name="profile"
+        options={{ href: null }}
       />
     </Tabs>
   );

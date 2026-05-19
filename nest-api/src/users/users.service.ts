@@ -83,10 +83,12 @@ export class UsersService {
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 
-    user.fullName = dto.fullName ?? user.fullName;
-    user.phone = dto.phone ?? user.phone;
-    user.address = dto.address ?? user.address;
-    user.avatarUrl = dto.avatarUrl ?? user.avatarUrl;
+    user.fullName  = dto.fullName  ?? user.fullName;
+    user.phone     = dto.phone     ?? user.phone;
+    user.address   = dto.address   ?? user.address;
+    if (dto.avatarUrl !== undefined) {
+      user.avatarUrl = dto.avatarUrl || null;
+    }
 
     const saved = await this.userRepo.save(user);
 

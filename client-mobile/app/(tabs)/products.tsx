@@ -1,84 +1,50 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
   FlatList,
-  ActivityIndicator,
   TextInput,
+  ActivityIndicator,
   StyleSheet,
   Keyboard,
   StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
 import { API_BASE_URL } from '../../src/config/api';
 import ProductCard from '../../components/ProductCard';
-import { mapGroupToCard, ApiGroup } from '../../src/utils/mapProduct';
+import { mapProductToCard } from '../../src/utils/mapProduct';
+import type { ApiProduct } from '../../src/types/product';
 
-const STORAGE_KEY = '@search_history';
-
-export default function HomeScreen() {
-  const [groups, setGroups] = useState<ApiGroup[]>([]);
+export default function ProductsScreen() {
+  const [products, setProducts] = useState<ApiProduct[]>([]);
   const [search, setSearch] = useState('');
-  const [history, setHistory] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useFocusEffect(
-    useCallback(() => {
-      void fetchGroups();
-      void loadHistory();
-    }, [])
-  );
+  useEffect(() => {
+    void fetchProducts();
+  }, []);
 
-  const fetchGroups = async () => {
-    setLoading(true);
+  const fetchProducts = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/groups`);
+      const res = await fetch(`${API_BASE_URL}/api/products`);
       const data: unknown = await res.json();
-      if (!Array.isArray(data)) { setGroups([]); return; }
-
-      const now = new Date();
-      const active = (data as ApiGroup[]).filter(
-        g => g.isActive && !g.isCompleted && (!g.deadline || new Date(g.deadline) > now)
-      );
-      setGroups(active);
+      setProducts(Array.isArray(data) ? (data as ApiProduct[]) : []);
     } catch {
-      setGroups([]);
+      setProducts([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadHistory = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      if (!stored) return;
-      const parsed: unknown = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.every(x => typeof x === 'string')) {
-        setHistory(parsed);
-      }
-    } catch {
-      setHistory([]);
-    }
-  };
-
-  const saveToHistory = async (text: string) => {
-    const value = text.trim();
-    if (!value) return;
-    const updated = [value, ...history.filter(h => h !== value)].slice(0, 5);
-    setHistory(updated);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  };
-
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return groups.filter(g =>
-      g.name?.toLowerCase().includes(q) ||
-      g.product?.name?.toLowerCase().includes(q)
+    return products.filter(
+      p =>
+        p.name?.toLowerCase().includes(q) ||
+        (p as any).category?.toLowerCase().includes(q)
     );
-  }, [groups, search]);
+  }, [products, search]);
 
   if (loading) {
     return <ActivityIndicator style={{ flex: 1 }} size="large" color="#228be6" />;
@@ -94,22 +60,19 @@ export default function HomeScreen() {
         end={{ x: 1, y: 1 }}
         style={styles.banner}
       >
-        <Text style={styles.bannerTitle}>Active Group Deals</Text>
+        <Text style={styles.bannerTitle}>All Products</Text>
         <Text style={styles.bannerSubtitle}>
-          Join a group and save together
+          Discover products available for group buying
         </Text>
 
         <View style={styles.searchBox}>
           <Ionicons name="search" size={16} color="#868e96" />
           <TextInput
-            placeholder="Search groups or products..."
+            placeholder="Search products or categories..."
             placeholderTextColor="#adb5bd"
             value={search}
             onChangeText={setSearch}
-            onSubmitEditing={() => {
-              void saveToHistory(search);
-              Keyboard.dismiss();
-            }}
+            onSubmitEditing={() => Keyboard.dismiss()}
             style={styles.searchInput}
             returnKeyType="search"
           />
@@ -118,21 +81,19 @@ export default function HomeScreen() {
 
       <FlatList
         data={filtered}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         numColumns={2}
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <ProductCard {...mapGroupToCard(item)} />
-        )}
+        renderItem={({ item }) => <ProductCard {...mapProductToCard(item)} />}
         ListHeaderComponent={
           <Text style={styles.sectionLabel}>
-            {search ? `Results for "${search}"` : 'All Deals'} · {filtered.length} available
+            {filtered.length} product{filtered.length !== 1 ? 's' : ''} found
           </Text>
         }
         ListEmptyComponent={
-          <Text style={styles.emptyText}>No active deals found</Text>
+          <Text style={styles.emptyText}>No products found</Text>
         }
       />
     </View>
@@ -185,10 +146,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   row: { gap: 12 },
-  listContent: {
-    padding: 16,
-    paddingBottom: 40,
-  },
+  listContent: { padding: 16, paddingBottom: 40 },
   emptyText: {
     textAlign: 'center',
     marginTop: 60,

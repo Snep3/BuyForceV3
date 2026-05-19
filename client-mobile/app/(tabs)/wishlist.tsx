@@ -65,7 +65,7 @@ export default function WishlistScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2f95dc" />
+        <ActivityIndicator size="large" color="#228be6" />
       </View>
     );
   }
@@ -131,8 +131,8 @@ const styles = StyleSheet.create({
   iconCircle: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#f9fafb', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   emptyTitle: { fontSize: 20, fontWeight: 'bold', color: '#333', marginBottom: 10, textAlign: 'center' },
   emptySubtitle: { fontSize: 16, color: '#9ca3af', textAlign: 'center', lineHeight: 24, marginBottom: 30 },
-  browseButton: { backgroundColor: '#2f95dc', paddingVertical: 14, paddingHorizontal: 32, borderRadius: 12, width: '100%', alignItems: 'center' },
+  browseButton: { backgroundColor: '#228be6', paddingVertical: 14, paddingHorizontal: 32, borderRadius: 12, width: '100%', alignItems: 'center' },
   browseButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  loginButton: { backgroundColor: '#2f95dc', paddingVertical: 12, paddingHorizontal: 30, borderRadius: 25, marginTop: 20 },
+  loginButton: { backgroundColor: '#228be6', paddingVertical: 12, paddingHorizontal: 30, borderRadius: 25, marginTop: 20 },
   loginButtonText: { color: '#fff', fontWeight: 'bold' }
 });

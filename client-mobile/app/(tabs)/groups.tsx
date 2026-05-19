@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import ProductCard from '../../components/ProductCard';
 import { useStore } from '../../store/useStore';
 import { API_BASE_URL } from '../../src/config/api';
-import { mapProductToCard } from '../../src/utils/mapProduct';
+import { mapGroupToCard } from '../../src/utils/mapProduct';
 
 type TabType = 'ACTIVE' | 'COMPLETED' | 'FAILED';
 
@@ -108,7 +108,7 @@ export default function GroupsScreen() {
 
   if (loading) return (
     <View style={styles.center}>
-      <ActivityIndicator size="large" color="#2f95dc" />
+      <ActivityIndicator size="large" color="#228be6" />
     </View>
   );
 
@@ -133,11 +133,7 @@ export default function GroupsScreen() {
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <View style={styles.cardContainer}>
-            <ProductCard {...mapProductToCard(item.product)} />
-            <View style={styles.progressRow}>
-                <Text style={styles.progressText}>{item.progress}% Full</Text>
-                {activeTab === 'ACTIVE' && <Text style={styles.timerText}>Active</Text>}
-            </View>
+            <ProductCard {...mapGroupToCard(item)} />
           </View>
         )}
         ListEmptyComponent={EmptyState}
@@ -153,19 +149,19 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#1e293b' },
   tabsContainer: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 15, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
   tab: { marginRight: 20, paddingBottom: 10, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  activeTab: { borderBottomColor: '#2f95dc' },
+  activeTab: { borderBottomColor: '#228be6' },
   tabText: { fontSize: 16, color: '#94a3b8', fontWeight: '500' },
-  activeTabText: { color: '#2f95dc', fontWeight: 'bold' },
+  activeTabText: { color: '#228be6', fontWeight: 'bold' },
   listContent: { paddingHorizontal: 15, flexGrow: 1, paddingBottom: 20 },
   row: { justifyContent: 'space-between', marginBottom: 20 },
   cardContainer: { width: '48%' },
   progressRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
-  progressText: { fontSize: 12, fontWeight: 'bold', color: '#2f95dc' },
+  progressText: { fontSize: 12, fontWeight: 'bold', color: '#228be6' },
   timerText: { fontSize: 10, color: '#22c55e', fontWeight: '600' },
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, marginTop: 60 },
   iconCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#f9fafb', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   emptyTitle: { fontSize: 20, fontWeight: 'bold', color: '#334155', marginBottom: 8 },
   emptySubtitle: { fontSize: 14, color: '#94a3b8', textAlign: 'center', lineHeight: 20, marginBottom: 24 },
-  browseButton: { backgroundColor: '#2f95dc', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 10, width: '100%', alignItems: 'center' },
+  browseButton: { backgroundColor: '#228be6', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 10, width: '100%', alignItems: 'center' },
   browseButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 }
 });
