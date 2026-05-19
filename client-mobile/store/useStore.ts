@@ -10,10 +10,12 @@ interface AppState {
   token: string | null;
   user: any | null;
   isDark: boolean;
+  unreadCount: number;
 
   // Actions
   fetchWishlist: () => Promise<void>;
   fetchJoinedGroups: () => Promise<void>;
+  fetchUnreadCount: () => Promise<void>;
   toggleWishlist: (id: string, isGroup?: boolean) => Promise<void>;
   isWishlisted: (id: string) => boolean;
   joinGroup: (groupId: string) => Promise<boolean>;
@@ -34,6 +36,21 @@ export const useStore = create<AppState>()(
       token: null,
       user: null,
       isDark: false,
+      unreadCount: 0,
+
+      fetchUnreadCount: async () => {
+        const { token } = get();
+        if (!token) return;
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/notifications/my`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            set({ unreadCount: data.filter((n: any) => !n.isRead).length });
+          }
+        } catch {}
+      },
 
       fetchWishlist: async () => {
         const { token } = get();
@@ -153,6 +170,7 @@ export const useStore = create<AppState>()(
         set({ isLoggedIn: true, token, user });
         get().fetchWishlist();
         get().fetchJoinedGroups();
+        get().fetchUnreadCount();
       },
 
       logout: () => set({
@@ -160,7 +178,8 @@ export const useStore = create<AppState>()(
         token: null,
         user: null,
         wishlistIds: [],
-        joinedGroupIds: []
+        joinedGroupIds: [],
+        unreadCount: 0,
       }),
 
       toggleTheme: () => set(s => ({ isDark: !s.isDark })),

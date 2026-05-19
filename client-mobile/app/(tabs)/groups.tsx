@@ -118,11 +118,20 @@ export default function GroupsScreen() {
               <Ionicons name="image-outline" size={40} color={t.subtext} />
             </View>
           )}
-          {!isExpired && (
-            <View style={[styles.badge, { backgroundColor: isFull ? '#f08c00' : '#20c997' }]}>
-              <Text style={styles.badgeText}>{isFull ? 'Completed' : 'Active'}</Text>
-            </View>
-          )}
+          {(() => {
+              const s = isFull
+                ? { label: 'Completed', bg: '#20c997' }
+                : isExpired
+                ? { label: 'Expired',   bg: '#f08c00' }
+                : group.isActive
+                ? { label: 'Active',    bg: '#228be6' }
+                : { label: 'Cancelled', bg: '#fa5252' };
+              return (
+                <View style={[styles.badge, { backgroundColor: s.bg }]}>
+                  <Text style={styles.badgeText}>{s.label}</Text>
+                </View>
+              );
+            })()}
         </View>
 
         <View style={styles.content}>

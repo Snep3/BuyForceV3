@@ -8,6 +8,7 @@ import { getTheme } from "../../src/theme";
 export default function TabLayout() {
   const isLoggedIn = useStore((state) => state.isLoggedIn);
   const isDark = useStore((state) => state.isDark);
+  const unreadCount = useStore((state) => state.unreadCount);
   const t = getTheme(isDark);
   const router = useRouter();
 
@@ -58,6 +59,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => (
             <Ionicons name="notifications-outline" size={24} color={color} />
           ),
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
         listeners={{ tabPress: guardTabPress }}
       />

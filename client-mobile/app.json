@@ -12,6 +12,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.buyforce.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -53,7 +54,11 @@
     },
     "extra": {
       "stripePublishableKey": "pk_test_51Sh4jwKDL2M962HXKPcMH5eTEp1KUmPhCDzuRIe6DyLcla9C0LHKB5LCFjNXbGQxNgkM8ipG3a5uJ79IWhZKY8Xv00cRvnFqs5",
-      "apiUrl": "http://10.0.2.2:4000"
+      "apiUrl": "https://buyforce-class-ready.onrender.com",
+      "router": {},
+      "eas": {
+        "projectId": "179717c3-6762-480d-990d-07c22e7828a0"
+      }
     }
   }
 }

@@ -28,7 +28,7 @@ export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   
-  const { token, isDark } = useStore();
+  const { token, isDark, fetchUnreadCount } = useStore();
   const t = getTheme(isDark);
 
   useEffect(() => {
@@ -51,7 +51,9 @@ export default function NotificationsScreen() {
       
       if (!response.ok) throw new Error('Failed to fetch notifications');
       const data = await response.json();
-      setNotifications(data);
+      const unique = Array.from(new Map(data.map((n: any) => [n.id, n])).values()) as NotificationItem[];
+      setNotifications(unique);
+      fetchUnreadCount();
     } catch (error) {
       console.error("Notifications fetch error:", error);
     } finally {
@@ -67,9 +69,10 @@ export default function NotificationsScreen() {
       });
 
       if (res.ok) {
-        setNotifications(prev => 
+        setNotifications(prev =>
           prev.map(n => n.id === id ? { ...n, isRead: true } : n)
         );
+        fetchUnreadCount();
       }
     } catch (err) {
       console.error("Mark as read error:", err);
@@ -89,6 +92,7 @@ export default function NotificationsScreen() {
         )
       );
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      fetchUnreadCount();
     } catch (err) {
       console.error("Mark all as read error:", err);
     }
@@ -114,6 +118,7 @@ export default function NotificationsScreen() {
                 )
               );
               setNotifications([]);
+              fetchUnreadCount();
             } catch (err) {
               console.error("Delete all error:", err);
             }
@@ -141,6 +146,7 @@ export default function NotificationsScreen() {
 
               if (res.ok) {
                 setNotifications(prev => prev.filter(n => n.id !== id));
+                fetchUnreadCount();
               }
             } catch (err) {
               console.error("Delete error:", err);
