@@ -198,7 +198,7 @@ async joinGroupWithPayment(userId: string, groupId: string) {
 
     await this.notificationsService.createNotification(userId, {
       type: 'GROUP_JOIN',
-      message: `Successfully join to team "${group.name}"!`,
+      message: `You've joined the group "${group.name}".`,
     });
 
     const currentCount = await this.groupMemberRepo.count({
@@ -210,7 +210,7 @@ async joinGroupWithPayment(userId: string, groupId: string) {
     if (remaining > 0 && remaining <= 3) {
       await this.notifyAllMembers(group.id, {
         type: 'GROUP_THRESHOLD',
-        message: ` Just ${remaining} participants and the team  "${group.name}" close!`,
+        message: `Almost there! Only ${remaining} more member${remaining !== 1 ? 's' : ''} needed to complete "${group.name}".`,
       });
     }
 
@@ -229,7 +229,7 @@ async joinGroupWithPayment(userId: string, groupId: string) {
       for (const member of members) {
         await this.notificationsService.createNotification(member.userId, {
           type: 'GROUP_COMPLETED',
-          message: `Congratulations, you have reached the target number of participants in the group "${group.name}" Your order is on the way!.`,
+          message: `Group complete! Your order for "${group.name}" has been confirmed.`,
         });
       }
     }
@@ -276,7 +276,7 @@ async joinGroupWithPayment(userId: string, groupId: string) {
 
     await this.notificationsService.createNotification(userId, {
       type: 'GROUP_LEAVE',
-      message: ` you leave the team  "${group.name}". Your order is canceled   .`,
+      message: `You've left the group "${group.name}". Your order has been cancelled.`,
     });
 
     const membersCount = await this.groupMemberRepo.count({

@@ -25,7 +25,7 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { token, user, logout, isDark, toggleTheme } = useStore();
+  const { token, user, logout, isDark, toggleTheme, updateUser } = useStore();
   const t = getTheme(isDark);
 
   const [profile, setProfile]   = useState<any>(null);
@@ -100,6 +100,7 @@ export default function ProfileScreen() {
       }
       setProfile((prev: any) => ({ ...prev, ...changes }));
       setForm(f => ({ ...f, ...Object.fromEntries(Object.entries(changes).map(([k, v]) => [k, v == null ? '' : v])) }));
+      updateUser(changes);
       setIsEditing(false);
     } catch (e: any) {
       Alert.alert('Error', e.message || 'Failed to save changes');
@@ -161,7 +162,9 @@ export default function ProfileScreen() {
 
       {/* ── Profile Card ── */}
       <View style={[styles.card, { backgroundColor: t.card }]}>
-        <LinearGradient colors={['#228be6', '#15aabf']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cover} />
+        <LinearGradient colors={['#228be6', '#15aabf']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cover}>
+          <View style={styles.coverOverlay} />
+        </LinearGradient>
 
         <View style={styles.header}>
           <View style={styles.avatarWrap}>
@@ -169,7 +172,7 @@ export default function ProfileScreen() {
               <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImg} />
             ) : (
               <View style={styles.avatarFallback}>
-                <Ionicons name="person" size={40} color="#fff" />
+                <Text style={styles.avatarInitials}>{initials}</Text>
               </View>
             )}
           </View>
@@ -272,23 +275,23 @@ export default function ProfileScreen() {
                 return (
                   <TouchableOpacity
                     key={group.id}
-                    style={styles.groupRow}
+                    style={[styles.groupRow, { backgroundColor: t.inputBg }]}
                     onPress={() => group.productId && router.push(`/product/${group.productId}`)}
                     activeOpacity={0.8}
                   >
                     <View style={styles.groupRowTop}>
-                      <Text style={styles.groupName} numberOfLines={1}>{group.name}</Text>
+                      <Text style={[styles.groupName, { color: t.text }]} numberOfLines={1}>{group.name}</Text>
                       <View style={[styles.badge, { backgroundColor: group.isCompleted ? '#ebfbee' : '#e7f5ff' }]}>
                         <Text style={[styles.badgeText, { color: group.isCompleted ? '#2f9e44' : '#228be6' }]}>
                           {group.isCompleted ? 'Completed' : 'Active'}
                         </Text>
                       </View>
                     </View>
-                    <View style={styles.progressBg}>
+                    <View style={[styles.progressBg, { backgroundColor: isDark ? '#33363f' : '#e9ecef' }]}>
                       <View style={[styles.progressFill, { width: `${pct}%` as any, backgroundColor: group.isCompleted ? '#20c997' : '#228be6' }]} />
                     </View>
                     <View style={styles.groupRowBottom}>
-                      <Text style={styles.groupMeta}>{group.currentParticipants}/{group.minParticipants} members</Text>
+                      <Text style={[styles.groupMeta, { color: t.subtext }]}>{group.currentParticipants}/{group.minParticipants} members</Text>
                       <Text style={[styles.groupPct, { color: group.isCompleted ? '#20c997' : '#228be6' }]}>{pct}%</Text>
                     </View>
                   </TouchableOpacity>
@@ -336,10 +339,10 @@ export default function ProfileScreen() {
                   : '—';
                 const sc = STATUS_COLORS[order.status] ?? { bg: '#f1f3f5', color: '#868e96' };
                 return (
-                  <View key={order.id} style={styles.orderRow}>
+                  <View key={order.id} style={[styles.orderRow, { borderBottomColor: t.border }]}>
                     <View style={styles.orderInfo}>
-                      <Text style={styles.orderName} numberOfLines={1}>{productNames}</Text>
-                      <Text style={styles.orderDate}>
+                      <Text style={[styles.orderName, { color: t.text }]} numberOfLines={1}>{productNames}</Text>
+                      <Text style={[styles.orderDate, { color: t.subtext }]}>
                         {new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                       </Text>
                     </View>
@@ -380,12 +383,13 @@ const styles = StyleSheet.create({
 
   // Profile card
   card: { backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 24, elevation: 4, marginBottom: 16 },
-  cover: { height: 120 },
-  header: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 20, paddingBottom: 20, marginTop: -50, gap: 14 },
-  avatarWrap: { width: 90, height: 90, borderRadius: 45, borderWidth: 4, borderColor: '#fff', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 5 },
+  cover: { height: 140 },
+  coverOverlay: { position: 'absolute', inset: 0, borderRadius: 999, width: '40%', height: '140%', top: '-20%', left: '-5%', backgroundColor: 'rgba(255,255,255,0.08)' },
+  header: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 20, paddingBottom: 20, marginTop: -60, gap: 16 },
+  avatarWrap: { width: 110, height: 110, borderRadius: 55, borderWidth: 5, borderColor: '#fff', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 5 },
   avatarImg: { width: '100%', height: '100%' },
   avatarFallback: { width: '100%', height: '100%', backgroundColor: '#228be6', justifyContent: 'center', alignItems: 'center' },
-  avatarInitials: { fontSize: 28, fontWeight: '900', color: '#fff' },
+  avatarInitials: { fontSize: 32, fontWeight: '900', color: '#fff' },
   userInfo: { flex: 1, paddingBottom: 4 },
   userName:  { fontSize: 20, fontWeight: '900', color: '#1a1a1a', marginBottom: 3 },
   userEmail: { fontSize: 13, color: '#868e96' },

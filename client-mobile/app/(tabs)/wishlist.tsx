@@ -99,7 +99,7 @@ export default function WishlistScreen() {
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <View style={styles.cardContainer}>
-             <ProductCard {...mapProductToCard(item)} />
+             <ProductCard {...mapProductToCard(item)} showGroupInfo={false} />
           </View>
         )}
         ListEmptyComponent={

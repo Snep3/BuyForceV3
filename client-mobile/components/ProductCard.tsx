@@ -18,6 +18,7 @@ interface ProductCardProps {
   progress: number;
   image: string | any;
   endsAt?: string;
+  showGroupInfo?: boolean;
 }
 
 export default function ProductCard({
@@ -30,6 +31,7 @@ export default function ProductCard({
   progress,
   image,
   endsAt,
+  showGroupInfo = true,
 }: ProductCardProps) {
   const router = useRouter();
   const isDark = useStore(s => s.isDark);
@@ -77,14 +79,17 @@ export default function ProductCard({
           <Text style={styles.regularPrice}>₪{regularPrice}</Text>
         </View>
 
-        <View style={[styles.progressBarBg, { backgroundColor: isDark ? '#33363f' : '#e9ecef' }]}>
-          <View style={[styles.progressBarFill, { width: `${pct}%` as any }]} />
-        </View>
-
-        <View style={styles.statsRow}>
-          <Text style={[styles.statsText, { color: t.subtext }]}>{joinedCount}/{targetCount} joined</Text>
-          <Text style={[styles.percentageText, { color: t.subtext }]}>{Math.round(pct)}%</Text>
-        </View>
+        {showGroupInfo && (
+          <>
+            <View style={[styles.progressBarBg, { backgroundColor: isDark ? '#33363f' : '#e9ecef' }]}>
+              <View style={[styles.progressBarFill, { width: `${pct}%` as any }]} />
+            </View>
+            <View style={styles.statsRow}>
+              <Text style={[styles.statsText, { color: t.subtext }]}>{joinedCount}/{targetCount} joined</Text>
+              <Text style={[styles.percentageText, { color: t.subtext }]}>{Math.round(pct)}%</Text>
+            </View>
+          </>
+        )}
       </View>
     </TouchableOpacity>
   );

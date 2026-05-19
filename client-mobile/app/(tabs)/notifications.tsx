@@ -104,6 +104,13 @@ export default function NotificationsScreen() {
     );
   };
 
+  const TYPE_LABELS: Record<string, string> = {
+    GROUP_JOIN:      'Joined Group',
+    GROUP_COMPLETED: 'Group Completed',
+    GROUP_THRESHOLD: 'Almost There',
+    GROUP_LEAVE:     'Left Group',
+  };
+
   const getIconName = (type: string) => {
     switch (type) {
       case 'GROUP_JOIN': return 'person-add-outline';
@@ -160,7 +167,7 @@ export default function NotificationsScreen() {
               </View>
               <View style={styles.textContainer}>
                 <Text style={[styles.notifType, { color: t.subtext }, !item.isRead && styles.unreadText]}>
-                  {item.type.replace(/_/g, ' ')}
+                  {TYPE_LABELS[item.type] ?? item.type.replace(/_/g, ' ')}
                 </Text>
                 <Text style={[styles.notifMessage, { color: t.text }]} numberOfLines={2}>
                   {item.message}

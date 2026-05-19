@@ -93,6 +93,8 @@ export default function GroupsScreen() {
   const renderCard = ({ item: group }: { item: any }) => {
     const pct = Math.min(group.progress ?? 0, 100);
     const isFull = group.isCompleted || pct >= 100;
+    const isExpired = group.deadline ? new Date() > new Date(group.deadline) : false;
+    const canLeave = !isFull && !isExpired;
     const timeLeft = getTimeLeft(group.deadline);
     const imageUrl = group.product?.imageUrl;
     const imageSource = imageUrl
@@ -116,9 +118,11 @@ export default function GroupsScreen() {
               <Ionicons name="image-outline" size={40} color={t.subtext} />
             </View>
           )}
-          <View style={[styles.badge, { backgroundColor: isFull ? '#f08c00' : '#20c997' }]}>
-            <Text style={styles.badgeText}>{isFull ? 'Completed' : 'Active'}</Text>
-          </View>
+          {!isExpired && (
+            <View style={[styles.badge, { backgroundColor: isFull ? '#f08c00' : '#20c997' }]}>
+              <Text style={styles.badgeText}>{isFull ? 'Completed' : 'Active'}</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.content}>
@@ -151,15 +155,15 @@ export default function GroupsScreen() {
           )}
 
           <TouchableOpacity
-            style={[styles.leaveBtn, isFull && styles.leaveBtnDisabled]}
-            onPress={() => !isFull && handleLeave(group.id, group.name)}
-            disabled={isFull || isLeaving}
+            style={[styles.leaveBtn, !canLeave && styles.leaveBtnDisabled]}
+            onPress={() => canLeave && handleLeave(group.id, group.name)}
+            disabled={!canLeave || isLeaving}
           >
             {isLeaving ? (
-              <ActivityIndicator size="small" color={isFull ? '#adb5bd' : '#ff4d4f'} />
+              <ActivityIndicator size="small" color={canLeave ? '#ff4d4f' : '#adb5bd'} />
             ) : (
-              <Text style={[styles.leaveBtnText, isFull && styles.leaveBtnTextDisabled]}>
-                {isFull ? 'Completed' : 'Leave Group'}
+              <Text style={[styles.leaveBtnText, !canLeave && styles.leaveBtnTextDisabled]}>
+                {isFull ? 'Completed' : isExpired ? 'Ended' : 'Leave Group'}
               </Text>
             )}
           </TouchableOpacity>

@@ -22,6 +22,7 @@ interface AppState {
   login: (token: string, user: any) => void;
   logout: () => void;
   toggleTheme: () => void;
+  updateUser: (changes: Partial<any>) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -163,6 +164,7 @@ export const useStore = create<AppState>()(
       }),
 
       toggleTheme: () => set(s => ({ isDark: !s.isDark })),
+      updateUser: (changes) => set(s => ({ user: { ...s.user, ...changes } })),
     }),
     {
       name: 'buyforce-storage',

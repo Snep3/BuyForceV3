@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform, StatusBar, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useStore } from '../store/useStore';
 import { API_BASE_URL } from '../src/config/api';
@@ -9,13 +10,14 @@ export default function CustomHeader() {
   const router = useRouter();
   const { user, isLoggedIn, isDark } = useStore();
   const t = getTheme(isDark);
+  const insets = useSafeAreaInsets();
 
   const avatarUri = user?.avatarUrl
     ? (user.avatarUrl.startsWith('http') ? user.avatarUrl : `${API_BASE_URL}/api/products/images/${user.avatarUrl}`)
     : `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || user?.username || 'U')}&background=228be6&color=fff&bold=true`;
 
   return (
-    <View style={[styles.safeArea, { backgroundColor: t.card, borderBottomColor: t.border }]}>
+    <View style={[styles.safeArea, { backgroundColor: t.card, borderBottomColor: t.border, paddingTop: insets.top }]}>
       <View style={styles.container}>
         <Text style={[styles.logo, { color: t.text }]}>
           <Text style={styles.logoAccent}>Buy</Text>Force
@@ -40,7 +42,6 @@ export default function CustomHeader() {
 
 const styles = StyleSheet.create({
   safeArea: {
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     borderBottomWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },

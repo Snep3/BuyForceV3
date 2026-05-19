@@ -90,7 +90,7 @@ export default function ProductsScreen() {
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => <ProductCard {...mapProductToCard(item)} />}
+        renderItem={({ item }) => <ProductCard {...mapProductToCard(item)} showGroupInfo={false} />}
         ListHeaderComponent={
           <Text style={[styles.sectionLabel, { color: t.subtext }]}>
             {filtered.length} product{filtered.length !== 1 ? 's' : ''} found
