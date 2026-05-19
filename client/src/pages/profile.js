@@ -12,6 +12,8 @@ export default function ProfilePage() {
   const [myGroups, setMyGroups] = useState([]);
   const [myOrders, setMyOrders] = useState([]);
   const [form, setForm] = useState({ fullName: "", phone: "", address: "", avatarUrl: "" });
+  const [groupSearch, setGroupSearch] = useState("");
+  const [orderSearch, setOrderSearch] = useState("");
 
   async function loadData() {
     try {
@@ -70,6 +72,19 @@ export default function ProfilePage() {
   const initials = (profile?.fullName || profile?.username || "U").slice(0, 2).toUpperCase();
   const activeGroups = myGroups.filter((g) => !g.isCompleted).length;
   const completedGroups = myGroups.filter((g) => g.isCompleted).length;
+
+  const gq = groupSearch.toLowerCase();
+  const filteredGroups = gq
+    ? myGroups.filter((g) => g.name?.toLowerCase().includes(gq))
+    : myGroups;
+
+  const oq = orderSearch.toLowerCase();
+  const filteredOrders = oq
+    ? myOrders.filter((order) =>
+        order.items?.some((it) => it.product?.name?.toLowerCase().includes(oq)) ||
+        order.status?.toLowerCase().includes(oq)
+      )
+    : myOrders;
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#f4f7f6", direction: "ltr" }}>
@@ -175,9 +190,25 @@ export default function ProfilePage() {
 
         {/* My Groups */}
         <section>
-          <h2 style={{ fontSize: "1.3rem", fontWeight: "900", color: "#1a1a1a", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "20px", borderBottom: "2px solid #000", paddingBottom: "10px" }}>
-            My Groups Activity
-          </h2>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid #000", paddingBottom: "10px", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+            <h2 style={{ fontSize: "1.3rem", fontWeight: "900", color: "#1a1a1a", textTransform: "uppercase", letterSpacing: "1px", margin: 0 }}>
+              My Groups Activity
+            </h2>
+            {myGroups.length > 0 && (
+              <div style={{ position: "relative" }}>
+                <svg style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#212529" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input
+                  type="text"
+                  value={groupSearch}
+                  onChange={(e) => setGroupSearch(e.target.value)}
+                  placeholder="Search groups..."
+                  style={{ padding: "7px 12px 7px 30px", border: "1.5px solid #dee2e6", borderRadius: "8px", fontSize: "0.85rem", outline: "none", fontFamily: "inherit", width: "200px" }}
+                  onFocus={(e) => (e.target.style.borderColor = "#228be6")}
+                  onBlur={(e) => (e.target.style.borderColor = "#dee2e6")}
+                />
+              </div>
+            )}
+          </div>
           {myGroups.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px", color: "#adb5bd" }}>
               <div style={{ fontSize: "2.5rem", marginBottom: "12px" }}>🛍️</div>
@@ -186,9 +217,14 @@ export default function ProfilePage() {
                 Browse Active Deals
               </button>
             </div>
+          ) : filteredGroups.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "30px", color: "#adb5bd" }}>
+              <p style={{ fontStyle: "italic" }}>No groups match your search.</p>
+              <button onClick={() => setGroupSearch("")} style={{ padding: "7px 18px", background: "none", border: "1.5px solid #dee2e6", borderRadius: "8px", color: "#228be6", fontWeight: "700", cursor: "pointer", fontSize: "0.85rem" }}>Clear</button>
+            </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" }}>
-              {myGroups.map((group) => {
+              {filteredGroups.map((group) => {
                 const progress = group.progress ?? 0;
                 return (
                   <div
@@ -220,17 +256,38 @@ export default function ProfilePage() {
 
         {/* Recent Orders */}
         <section style={{ marginTop: "32px" }}>
-          <h2 style={{ fontSize: "1.3rem", fontWeight: "900", color: "#1a1a1a", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "20px", borderBottom: "2px solid #000", paddingBottom: "10px" }}>
-            Recent Orders
-          </h2>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid #000", paddingBottom: "10px", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+            <h2 style={{ fontSize: "1.3rem", fontWeight: "900", color: "#1a1a1a", textTransform: "uppercase", letterSpacing: "1px", margin: 0 }}>
+              Recent Orders
+            </h2>
+            {myOrders.length > 0 && (
+              <div style={{ position: "relative" }}>
+                <svg style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#212529" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input
+                  type="text"
+                  value={orderSearch}
+                  onChange={(e) => setOrderSearch(e.target.value)}
+                  placeholder="Search orders..."
+                  style={{ padding: "7px 12px 7px 30px", border: "1.5px solid #dee2e6", borderRadius: "8px", fontSize: "0.85rem", outline: "none", fontFamily: "inherit", width: "200px" }}
+                  onFocus={(e) => (e.target.style.borderColor = "#228be6")}
+                  onBlur={(e) => (e.target.style.borderColor = "#dee2e6")}
+                />
+              </div>
+            )}
+          </div>
           {myOrders.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px", color: "#adb5bd" }}>
               <div style={{ fontSize: "2.5rem", marginBottom: "12px" }}>📦</div>
               <p style={{ fontStyle: "italic" }}>No orders yet.</p>
             </div>
+          ) : filteredOrders.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "30px", color: "#adb5bd" }}>
+              <p style={{ fontStyle: "italic" }}>No orders match your search.</p>
+              <button onClick={() => setOrderSearch("")} style={{ padding: "7px 18px", background: "none", border: "1.5px solid #dee2e6", borderRadius: "8px", color: "#228be6", fontWeight: "700", cursor: "pointer", fontSize: "0.85rem" }}>Clear</button>
+            </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {myOrders.slice(0, 5).map((order) => {
+              {(oq ? filteredOrders : filteredOrders.slice(0, 5)).map((order) => {
                 const productNames = order.items?.length
                   ? order.items.map((it) => `${it.product?.name || "Unknown"}${it.quantity > 1 ? ` ×${it.quantity}` : ""}`).join(", ")
                   : "—";
@@ -255,7 +312,7 @@ export default function ProfilePage() {
                   </div>
                 );
               })}
-              {myOrders.length > 5 && (
+              {!oq && myOrders.length > 5 && (
                 <button onClick={() => router.push("/my-orders")} style={{ alignSelf: "center", padding: "9px 22px", background: "none", border: "1.5px solid #dee2e6", borderRadius: "10px", color: "#228be6", fontWeight: "700", cursor: "pointer", fontSize: "0.875rem" }}>
                   View all {myOrders.length} orders →
                 </button>
