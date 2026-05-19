@@ -142,7 +142,7 @@ export default function ProfileScreen() {
     return order.items?.some((it: any) => it.product?.name?.toLowerCase().includes(q));
   });
 
-  const activeGroups    = myGroups.filter(g => !g.isCompleted).length;
+  const activeGroups    = myGroups.filter(g => g.isActive && !g.isCompleted).length;
   const completedGroups = myGroups.filter(g => g.isCompleted).length;
 
   const stats = [
@@ -272,6 +272,8 @@ export default function ProfileScreen() {
                 <Text style={[styles.emptyText, { paddingVertical: 16 }]}>No groups match "{groupSearch}"</Text>
               ) : filteredGroups.map(group => {
                 const pct = Math.min(group.progress ?? 0, 100);
+                const isExpired = !!(group.deadline && new Date(group.deadline) < new Date());
+                const effectiveActive = group.isActive && !isExpired;
                 return (
                   <TouchableOpacity
                     key={group.id}
@@ -281,18 +283,27 @@ export default function ProfileScreen() {
                   >
                     <View style={styles.groupRowTop}>
                       <Text style={[styles.groupName, { color: t.text }]} numberOfLines={1}>{group.name}</Text>
-                      <View style={[styles.badge, { backgroundColor: group.isCompleted ? '#ebfbee' : '#e7f5ff' }]}>
-                        <Text style={[styles.badgeText, { color: group.isCompleted ? '#2f9e44' : '#228be6' }]}>
-                          {group.isCompleted ? 'Completed' : 'Active'}
-                        </Text>
-                      </View>
+                      {(() => {
+                        const s = group.isCompleted
+                          ? { label: 'Completed', bg: '#ebfbee', color: '#2f9e44' }
+                          : effectiveActive
+                          ? { label: 'Active',    bg: '#e7f5ff', color: '#228be6' }
+                          : isExpired
+                          ? { label: 'Expired',   bg: '#fff9db', color: '#f08c00' }
+                          : { label: 'Cancelled', bg: '#fff5f5', color: '#fa5252' };
+                        return (
+                          <View style={[styles.badge, { backgroundColor: s.bg }]}>
+                            <Text style={[styles.badgeText, { color: s.color }]}>{s.label}</Text>
+                          </View>
+                        );
+                      })()}
                     </View>
                     <View style={[styles.progressBg, { backgroundColor: isDark ? '#33363f' : '#e9ecef' }]}>
-                      <View style={[styles.progressFill, { width: `${pct}%` as any, backgroundColor: group.isCompleted ? '#20c997' : '#228be6' }]} />
+                      <View style={[styles.progressFill, { width: `${pct}%` as any, backgroundColor: group.isCompleted ? '#20c997' : effectiveActive ? '#228be6' : isExpired ? '#f08c00' : '#fa5252' }]} />
                     </View>
                     <View style={styles.groupRowBottom}>
                       <Text style={[styles.groupMeta, { color: t.subtext }]}>{group.currentParticipants}/{group.minParticipants} members</Text>
-                      <Text style={[styles.groupPct, { color: group.isCompleted ? '#20c997' : '#228be6' }]}>{pct}%</Text>
+                      <Text style={[styles.groupPct, { color: group.isCompleted ? '#20c997' : effectiveActive ? '#228be6' : isExpired ? '#f08c00' : '#fa5252' }]}>{pct}%</Text>
                     </View>
                   </TouchableOpacity>
                 );

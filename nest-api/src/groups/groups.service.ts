@@ -108,9 +108,11 @@ export class GroupsService {
       order: { joinedAt: 'DESC' },
     });
 
+    const now = new Date();
     return memberships.map((m) => {
       const g = m.group;
       const currentParticipants = g.members ? g.members.length : 0;
+      const isExpired = !!(g.deadline && now > new Date(g.deadline));
 
       const progress =
         g.minParticipants > 0
@@ -131,7 +133,8 @@ export class GroupsService {
         name: g.name,
         description: g.product?.description,
         minParticipants: g.minParticipants,
-        isActive: g.isActive,
+        isActive: isExpired ? false : g.isActive,
+        isExpired,
         isCompleted: g.isCompleted,
         deadline: g.deadline,
         productId: g.productId,

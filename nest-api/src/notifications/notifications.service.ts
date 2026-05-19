@@ -51,4 +51,17 @@ export class NotificationsService {
     }
     return { success: true };
   }
+
+  async markAllAsRead(userId: string) {
+    await this.notificationsRepo.update(
+      { user: { id: userId }, isRead: false },
+      { isRead: true },
+    );
+    return { success: true };
+  }
+
+  async removeAll(userId: string) {
+    await this.notificationsRepo.delete({ user: { id: userId } });
+    return { success: true };
+  }
 }
