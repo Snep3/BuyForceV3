@@ -92,7 +92,7 @@ export default function ProductDetailsScreen() {
   const handleActionPress = async () => {
     if (!token) {
       Alert.alert('Login Required', 'Please log in to participate.', [
-        { text: 'Cancel' }, { text: 'Login', onPress: () => router.push('/login' as any) },
+        { text: 'Cancel' }, { text: 'Login', onPress: () => router.push('/(auth)/login') },
       ]);
       return;
     }

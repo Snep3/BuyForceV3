@@ -77,7 +77,7 @@ export default function WishlistScreen() {
       <SafeAreaView style={[styles.container, styles.center]}>
         <Ionicons name="heart-dislike-outline" size={80} color="#cbd5e1" />
         <Text style={styles.emptyTitle}>Log in to see your wishlist</Text>
-        <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/login' as any)}>
+        <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/(auth)/login')}>
           <Text style={styles.loginButtonText}>Go to Login</Text>
         </TouchableOpacity>
       </SafeAreaView>

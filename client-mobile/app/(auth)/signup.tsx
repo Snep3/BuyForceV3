@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { API_BASE_URL } from '../../src/config/api';
+import { useStore } from '../../store/useStore';
 
 export default function SignupScreen() {
   const [form, setForm] = useState({ email: '', password: '', username: '' });
@@ -37,9 +38,18 @@ export default function SignupScreen() {
 
       if (!res.ok) throw new Error(data.message || 'Registration failed');
 
-      Alert.alert('Success', 'Account created! Please login.', [
-        { text: 'OK', onPress: () => router.push('/(auth)/login') },
-      ]);
+      const loginRes = await fetch(`${API_BASE_URL}/api/users/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email, password: form.password }),
+      });
+      const loginData = await loginRes.json();
+      if (loginRes.ok) {
+        useStore.getState().login(loginData.token, loginData.user);
+        router.replace('/(tabs)');
+      } else {
+        router.push('/(auth)/login');
+      }
     } catch (err: any) {
       Alert.alert('Signup Error', err.message);
     } finally {
