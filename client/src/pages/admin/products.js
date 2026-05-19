@@ -217,7 +217,7 @@ export default function AdminProductsPage() {
                             <td style={{ padding: "10px 16px" }}>
                               <div style={{ width: 40, height: 40, background: "#25262b", borderRadius: "6px", overflow: "hidden", display: "grid", placeItems: "center" }}>
                                 {p.imageUrl
-                                  ? <img src={p.imageUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                                  ? <img src={p.imageUrl} style={{ width: "100%", height: "100%", objectFit: "contain", padding: "2px" }} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                                   : <span style={{ fontSize: "10px", color: "#5c5f66" }}>—</span>
                                 }
                               </div>
@@ -290,12 +290,15 @@ export default function AdminProductsPage() {
                   <div>
                     <label className="admin-label">Image URL</label>
                     <input className="admin-input" value={form.imageUrl} onChange={(e) => { setForm({ ...form, imageUrl: e.target.value }); setImgPreviewError(""); }} placeholder="https://example.com/image.jpg" />
+                    <div style={{ marginTop: "5px", fontSize: "0.75rem", color: "#5c5f66" }}>
+                      Recommended: square image, at least 800×800px (JPG or PNG)
+                    </div>
                   </div>
 
                   {previewUrl && (
                     <div style={{ display: "flex", gap: "12px", alignItems: "center", background: "#25262b", padding: "12px", borderRadius: "8px" }}>
                       <div style={{ width: 56, height: 56, borderRadius: "6px", overflow: "hidden", background: "#2c2e33", flexShrink: 0 }}>
-                        <img src={previewUrl} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={() => setImgPreviewError("Image failed to load")} />
+                        <img src={previewUrl} alt="preview" style={{ width: "100%", height: "100%", objectFit: "contain", padding: "4px" }} onError={() => setImgPreviewError("Image failed to load")} />
                       </div>
                       <div>
                         <div style={{ fontSize: "0.75rem", color: "#909296", fontWeight: "700", textTransform: "uppercase" }}>Preview</div>

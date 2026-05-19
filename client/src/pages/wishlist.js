@@ -199,7 +199,7 @@ const sectionTitleStyle = { fontSize: "1.4rem", fontWeight: "900", color: "#000"
 const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "2rem" };
 const cardStyle = { backgroundColor: "#fff", borderRadius: "16px", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 10px 30px rgba(0,0,0,0.08)", transition: "all 0.3s ease", border: "1px solid #eee", height: "100%" };
 const imageContainerStyle = { width: "100%", height: "200px", position: "relative", overflow: "hidden" };
-const imageStyle = { width: "100%", height: "100%", objectFit: "cover" };
+const imageStyle = { width: "100%", height: "100%", objectFit: "contain", padding: "8px" };
 const badgeStyle = { position: "absolute", top: "15px", right: "15px", backgroundColor: "#228be6", color: "#fff", padding: "5px 12px", borderRadius: "8px", fontSize: "0.7rem", fontWeight: "900", boxShadow: "0 4px 10px rgba(34, 139, 230, 0.3)" };
 
 const cardContentStyle = { 
