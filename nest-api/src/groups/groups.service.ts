@@ -198,7 +198,7 @@ async joinGroupWithPayment(userId: string, groupId: string) {
 
     await this.notificationsService.createNotification(userId, {
       type: 'GROUP_JOIN',
-      message: `Successfully join to team "${group.name}"!`,
+      message: `You've joined the group "${group.name}".`,
     });
 
     const currentCount = await this.groupMemberRepo.count({
@@ -210,7 +210,7 @@ async joinGroupWithPayment(userId: string, groupId: string) {
     if (remaining > 0 && remaining <= 3) {
       await this.notifyAllMembers(group.id, {
         type: 'GROUP_THRESHOLD',
-        message: ` Just ${remaining} participants and the team  "${group.name}" close!`,
+        message: `Almost there! Only ${remaining} more member${remaining !== 1 ? 's' : ''} needed to complete "${group.name}".`,
       });
     }
 
@@ -229,7 +229,7 @@ async joinGroupWithPayment(userId: string, groupId: string) {
       for (const member of members) {
         await this.notificationsService.createNotification(member.userId, {
           type: 'GROUP_COMPLETED',
-          message: `Congratulations, you have reached the target number of participants in the group "${group.name}" Your order is on the way!.`,
+          message: `Group complete! Your order for "${group.name}" has been confirmed.`,
         });
       }
     }
@@ -276,7 +276,7 @@ async joinGroupWithPayment(userId: string, groupId: string) {
 
     await this.notificationsService.createNotification(userId, {
       type: 'GROUP_LEAVE',
-      message: ` you leave the team  "${group.name}". Your order is canceled   .`,
+      message: `You've left the group "${group.name}". Your order has been cancelled.`,
     });
 
     const membersCount = await this.groupMemberRepo.count({
@@ -410,7 +410,15 @@ async getGroupById(id: string) {
     if (dto.description !== undefined) group.description = dto.description;
     if (dto.minParticipants !== undefined)
       group.minParticipants = dto.minParticipants;
-    if (dto.isActive !== undefined) group.isActive = dto.isActive;
+    if (dto.isActive !== undefined) {
+      if (dto.isActive === false && group.isActive !== false) {
+        await this.orderRepo.update(
+          { groupId: group.id, status: 'pending' },
+          { status: 'cancelled' },
+        );
+      }
+      group.isActive = dto.isActive;
+    }
     if (dto.deadline !== undefined) group.deadline = dto.deadline ? new Date(dto.deadline) : null;
     if (dto.discountPercent !== undefined) group.discountPercent = dto.discountPercent;
 
@@ -435,6 +443,11 @@ async getGroupById(id: string) {
   async remove(id: string) {
     const group = await this.groupRepo.findOne({ where: { id } });
     if (!group) throw new NotFoundException('Group not found');
+
+    await this.orderRepo.update(
+      { groupId: group.id, status: 'pending' },
+      { status: 'cancelled' },
+    );
 
     await this.groupRepo.remove(group);
     void this.syncGroupsSeedFile();

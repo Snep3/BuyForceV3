@@ -3,9 +3,12 @@ import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useStore } from "../../store/useStore";
 import CustomHeader from "../../components/CustomHeader";
+import { getTheme } from "../../src/theme";
 
 export default function TabLayout() {
   const isLoggedIn = useStore((state) => state.isLoggedIn);
+  const isDark = useStore((state) => state.isDark);
+  const t = getTheme(isDark);
   const router = useRouter();
 
   const guardTabPress = (e: any) => {
@@ -19,8 +22,13 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: "#228be6",
-        tabBarInactiveTintColor: "gray",
+        tabBarInactiveTintColor: isDark ? "#5a5e6a" : "gray",
         header: () => <CustomHeader />,
+        tabBarStyle: {
+          backgroundColor: t.tabBar,
+          borderTopColor: t.tabBorder,
+        },
+        tabBarLabelStyle: { color: isDark ? t.subtext : undefined },
       }}
     >
       <Tabs.Screen

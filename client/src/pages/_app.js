@@ -49,7 +49,9 @@ export default function App({ Component, pageProps }) {
   return (
     <>
       {!hideNav && <NavBar />}
-      <Component {...pageProps} />
+      <div style={{ paddingTop: hideNav ? 0 : "60px" }}>
+        <Component {...pageProps} />
+      </div>
       {!isAdminPage && <button
         onClick={toggleDark}
         title={isDark ? "Switch to light mode" : "Switch to dark mode"}

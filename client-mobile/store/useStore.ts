@@ -9,6 +9,7 @@ interface AppState {
   isLoggedIn: boolean;
   token: string | null;
   user: any | null;
+  isDark: boolean;
 
   // Actions
   fetchWishlist: () => Promise<void>;
@@ -20,6 +21,8 @@ interface AppState {
   hasJoined: (groupId: string) => boolean;
   login: (token: string, user: any) => void;
   logout: () => void;
+  toggleTheme: () => void;
+  updateUser: (changes: Partial<any>) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -30,6 +33,7 @@ export const useStore = create<AppState>()(
       isLoggedIn: false,
       token: null,
       user: null,
+      isDark: false,
 
       fetchWishlist: async () => {
         const { token } = get();
@@ -151,13 +155,16 @@ export const useStore = create<AppState>()(
         get().fetchJoinedGroups();
       },
 
-      logout: () => set({ 
-        isLoggedIn: false, 
-        token: null, 
-        user: null, 
-        wishlistIds: [], 
-        joinedGroupIds: [] 
+      logout: () => set({
+        isLoggedIn: false,
+        token: null,
+        user: null,
+        wishlistIds: [],
+        joinedGroupIds: []
       }),
+
+      toggleTheme: () => set(s => ({ isDark: !s.isDark })),
+      updateUser: (changes) => set(s => ({ user: { ...s.user, ...changes } })),
     }),
     {
       name: 'buyforce-storage',

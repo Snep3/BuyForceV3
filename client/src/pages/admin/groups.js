@@ -22,6 +22,8 @@ export default function AdminGroupsPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [allProducts, setAllProducts] = useState([]);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -30,6 +32,7 @@ export default function AdminGroupsPage() {
       return;
     }
     fetchGroups();
+    http.get("/api/products").then((r) => setAllProducts(Array.isArray(r.data) ? r.data : [])).catch(() => {});
   }, []);
 
   async function fetchGroups() {
@@ -67,7 +70,7 @@ export default function AdminGroupsPage() {
       productId: group.productId || (group.product ? group.product.id : ""),
       minParticipants: typeof group.minParticipants === "number" ? String(group.minParticipants) : "",
       isActive: !!group.isActive,
-      deadline: group.deadline ? new Date(group.deadline).toISOString().slice(0, 16) : "",
+      deadline: group.deadline ? (() => { const d = new Date(group.deadline); return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); })() : "",
       discountPercent: group.discountPercent != null ? String(group.discountPercent) : "",
     });
     setError("");
@@ -97,7 +100,7 @@ export default function AdminGroupsPage() {
         if (!Number.isNaN(n)) payload.minParticipants = n;
       }
       payload.isActive = form.isActive;
-      if (form.deadline) payload.deadline = form.deadline;
+      if (form.deadline) payload.deadline = new Date(form.deadline).toISOString();
       if (form.discountPercent !== "") {
         const d = Number(form.discountPercent);
         if (!Number.isNaN(d)) payload.discountPercent = d;
@@ -118,6 +121,24 @@ export default function AdminGroupsPage() {
       setLoading(false);
     }
   }
+
+  const sq = search.toLowerCase();
+  const filteredGroups = sq
+    ? groups.filter((g) =>
+        g.name?.toLowerCase().includes(sq) ||
+        g.product?.name?.toLowerCase().includes(sq)
+      )
+    : groups;
+
+  const activeProductIds = new Set(
+    groups
+      .filter((g) => g.isActive && !g.isCompleted)
+      .map((g) => g.productId || g.product?.id)
+      .filter(Boolean)
+  );
+  const availableProducts = allProducts.filter(
+    (p) => !activeProductIds.has(p.id) || (editingId && form.productId === p.id)
+  );
 
   return (
     <>
@@ -177,18 +198,34 @@ export default function AdminGroupsPage() {
 
               {/* Groups List */}
               <section style={{ background: "#1a1b1e", borderRadius: "12px", border: "1px solid #2c2e33", overflow: "hidden" }}>
-                <div style={{ padding: "16px 20px", borderBottom: "1px solid #2c2e33", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ padding: "16px 20px", borderBottom: "1px solid #2c2e33", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                   <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: "800", color: "#fff", textTransform: "uppercase", letterSpacing: "1px" }}>All Groups</h2>
-                  <button onClick={resetForm} style={{ background: "#228be6", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", fontWeight: "700", fontSize: "0.85rem", cursor: "pointer" }}>
-                    + New Group
-                  </button>
+                  <div style={{ display: "flex", gap: "10px", alignItems: "center", marginLeft: "auto" }}>
+                    <div style={{ position: "relative" }}>
+                      <svg style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#909296" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                      <input
+                        type="text"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search groups..."
+                        style={{ padding: "7px 12px 7px 32px", background: "#25262b", border: "1px solid #2c2e33", borderRadius: "8px", color: "#c1c2c5", fontSize: "0.85rem", outline: "none", width: "220px" }}
+                        onFocus={(e) => (e.target.style.borderColor = "#228be6")}
+                        onBlur={(e) => (e.target.style.borderColor = "#2c2e33")}
+                      />
+                    </div>
+                    <button onClick={resetForm} style={{ background: "#228be6", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", fontWeight: "700", fontSize: "0.85rem", cursor: "pointer", whiteSpace: "nowrap" }}>
+                      + New Group
+                    </button>
+                  </div>
                 </div>
 
                 <div>
                   {groups.length === 0 ? (
                     <p style={{ textAlign: "center", padding: "40px", color: "#909296" }}>No groups yet.</p>
+                  ) : filteredGroups.length === 0 ? (
+                    <p style={{ textAlign: "center", padding: "40px", color: "#909296" }}>No groups match your search.</p>
                   ) : (
-                    groups.map((g) => {
+                    filteredGroups.map((g) => {
                       const isExpired = g.deadline && new Date(g.deadline) < new Date();
                       const progress = Math.min(g.progress || 0, 100);
                       const isCompleted = progress >= 100;
@@ -276,8 +313,26 @@ export default function AdminGroupsPage() {
                     <input className="admin-input" type="text" name="name" value={form.name} onChange={handleChange} placeholder="e.g. Summer Electronics Deal" />
                   </div>
                   <div>
-                    <label className="admin-label">Product ID</label>
-                    <input className="admin-input" type="text" name="productId" value={form.productId} onChange={handleChange} placeholder="UUID of the product" />
+                    <label className="admin-label">Product</label>
+                    <select className="admin-input" name="productId" value={availableProducts.some(p => p.id === form.productId) ? form.productId : ""} onChange={handleChange}>
+                      <option value="">— Select a product —</option>
+                      {availableProducts.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name} — ₪{p.price}</option>
+                      ))}
+                    </select>
+                    {availableProducts.length === 0 && allProducts.length > 0 && (
+                      <div style={{ fontSize: "0.75rem", color: "#f08c00", marginTop: "6px" }}>All products already have an active group.</div>
+                    )}
+                    <div style={{ fontSize: "0.75rem", color: "#5c5f66", margin: "8px 0 4px", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: "700" }}>Or enter Product ID manually</div>
+                    <input
+                      className="admin-input"
+                      type="text"
+                      name="productId"
+                      value={form.productId}
+                      onChange={handleChange}
+                      placeholder="Paste product UUID..."
+                      style={{ marginTop: 0 }}
+                    />
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                     <div>

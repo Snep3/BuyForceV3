@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useStore } from '../../store/useStore';
 import { API_BASE_URL } from '../../src/config/api';
+import { getTheme } from '../../src/theme';
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   completed:  { bg: '#ebfbee', color: '#2f9e44' },
@@ -24,7 +25,8 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { token, user, logout } = useStore();
+  const { token, user, logout, isDark, toggleTheme, updateUser } = useStore();
+  const t = getTheme(isDark);
 
   const [profile, setProfile]   = useState<any>(null);
   const [myGroups, setMyGroups] = useState<any[]>([]);
@@ -44,6 +46,12 @@ export default function ProfileScreen() {
     if (!token) { setLoading(false); return; }
     void loadData();
   }, [token]);
+
+  useEffect(() => {
+    if (!form.avatarUrl.startsWith('https://ui-avatars.com')) return;
+    const name = form.fullName || profile?.username || 'User';
+    setForm(f => ({ ...f, avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=228be6&color=fff&size=200` }));
+  }, [form.fullName]);
 
   const loadData = async () => {
     try {
@@ -74,7 +82,9 @@ export default function ProfileScreen() {
       avatarUrl: profile?.avatarUrl || '',
     };
     const changes = Object.fromEntries(
-      Object.entries(form).filter(([k, v]) => v !== original[k as keyof typeof original])
+      Object.entries(form)
+        .filter(([k, v]) => v !== original[k as keyof typeof original])
+        .map(([k, v]) => [k, k === 'avatarUrl' && v === '' ? null : v])
     );
     if (Object.keys(changes).length === 0) { setIsEditing(false); return; }
     setSaving(true);
@@ -84,9 +94,13 @@ export default function ProfileScreen() {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(changes),
       });
-      if (!res.ok) throw new Error('Failed to save');
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err || 'Failed to save');
+      }
       setProfile((prev: any) => ({ ...prev, ...changes }));
-      setForm(f => ({ ...f, ...Object.fromEntries(Object.entries(changes).map(([k, v]) => [k, v ?? ''])) }));
+      setForm(f => ({ ...f, ...Object.fromEntries(Object.entries(changes).map(([k, v]) => [k, v == null ? '' : v])) }));
+      updateUser(changes);
       setIsEditing(false);
     } catch (e: any) {
       Alert.alert('Error', e.message || 'Failed to save changes');
@@ -113,7 +127,7 @@ export default function ProfileScreen() {
     );
   }
 
-  if (loading) return <ActivityIndicator style={{ flex: 1 }} size="large" color="#228be6" />;
+  if (loading) return <View style={{ flex: 1, backgroundColor: t.bg, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color="#228be6" /></View>;
 
   const displayName  = profile?.fullName || profile?.username || user?.fullName || user?.username || 'User';
   const email        = profile?.email || user?.email || '';
@@ -139,7 +153,7 @@ export default function ProfileScreen() {
 
   return (
     <KeyboardAwareScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: t.bg }]}
       contentContainerStyle={styles.scroll}
       keyboardShouldPersistTaps="handled"
       enableOnAndroid
@@ -147,8 +161,10 @@ export default function ProfileScreen() {
     >
 
       {/* ── Profile Card ── */}
-      <View style={styles.card}>
-        <LinearGradient colors={['#228be6', '#15aabf']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cover} />
+      <View style={[styles.card, { backgroundColor: t.card }]}>
+        <LinearGradient colors={['#228be6', '#15aabf']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cover}>
+          <View style={styles.coverOverlay} />
+        </LinearGradient>
 
         <View style={styles.header}>
           <View style={styles.avatarWrap}>
@@ -161,10 +177,10 @@ export default function ProfileScreen() {
             )}
           </View>
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>{displayName}</Text>
-            <Text style={styles.userEmail}>{email}{memberYear ? ` · Member since ${memberYear}` : ''}</Text>
-            {profile?.phone   && <Text style={styles.userMeta}>📞 {profile.phone}</Text>}
-            {profile?.address && <Text style={styles.userMeta}>📍 {profile.address}</Text>}
+            <Text style={[styles.userName, { color: t.text }]}>{displayName}</Text>
+            <Text style={[styles.userEmail, { color: t.subtext }]}>{email}{memberYear ? ` · Member since ${memberYear}` : ''}</Text>
+            {profile?.phone   && <Text style={[styles.userMeta, { color: t.text }]}>📞 {profile.phone}</Text>}
+            {profile?.address && <Text style={[styles.userMeta, { color: t.text }]}>📍 {profile.address}</Text>}
             <TouchableOpacity style={styles.editBtn} onPress={() => setIsEditing(e => !e)}>
               <Text style={styles.editBtnText}>{isEditing ? 'Cancel' : 'Edit Profile'}</Text>
             </TouchableOpacity>
@@ -181,7 +197,7 @@ export default function ProfileScreen() {
         </View>
 
         {isEditing && (
-          <View style={styles.editForm}>
+          <View style={[styles.editForm, { borderTopColor: t.border }]}>
             {[
               { label: 'Full Name',  key: 'fullName',  placeholder: 'Your full name' },
               { label: 'Phone',      key: 'phone',     placeholder: '+1 234 567 8900' },
@@ -191,15 +207,23 @@ export default function ProfileScreen() {
               <View key={key} style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>{label}</Text>
                 <TextInput
-                  style={styles.fieldInput}
+                  style={[styles.fieldInput, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.text }]}
                   value={form[key as keyof typeof form]}
                   onChangeText={t => setForm(f => ({ ...f, [key]: t }))}
                   placeholder={placeholder}
-                  placeholderTextColor="#adb5bd"
+                  placeholderTextColor={t.placeholder}
                   autoCapitalize="none"
                 />
               </View>
             ))}
+
+            <TouchableOpacity
+              style={styles.resetPicBtn}
+              onPress={() => setForm(f => ({ ...f, avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=228be6&color=fff&size=200` }))}
+            >
+              <Ionicons name="person-circle-outline" size={15} color="#228be6" />
+              <Text style={styles.resetPicText}>Reset Profile Picture</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.saveBtn, saving && { opacity: 0.6 }]}
@@ -213,10 +237,10 @@ export default function ProfileScreen() {
       </View>
 
       {/* ── My Groups (collapsible) ── */}
-      <View style={styles.section}>
+      <View style={[styles.section, { backgroundColor: t.card }]}>
         <TouchableOpacity style={styles.sectionHeader} onPress={() => setGroupsOpen(o => !o)} activeOpacity={0.7}>
-          <Text style={styles.sectionTitle}>My Groups Activity</Text>
-          <Ionicons name={groupsOpen ? 'chevron-up' : 'chevron-down'} size={20} color="#868e96" />
+          <Text style={[styles.sectionTitle, { color: t.text }]}>My Groups Activity</Text>
+          <Ionicons name={groupsOpen ? 'chevron-up' : 'chevron-down'} size={20} color={t.subtext} />
         </TouchableOpacity>
 
         {groupsOpen && (
@@ -229,18 +253,18 @@ export default function ProfileScreen() {
             </View>
           ) : (
             <View style={styles.sectionBody}>
-              <View style={styles.searchBox}>
-                <Ionicons name="search" size={15} color="#adb5bd" />
+              <View style={[styles.searchBox, { backgroundColor: t.inputBg, borderColor: t.inputBorder }]}>
+                <Ionicons name="search" size={15} color={t.placeholder} />
                 <TextInput
-                  style={styles.searchInput}
+                  style={[styles.searchInput, { color: t.text }]}
                   placeholder="Search groups..."
-                  placeholderTextColor="#adb5bd"
+                  placeholderTextColor={t.placeholder}
                   value={groupSearch}
                   onChangeText={setGroupSearch}
                 />
                 {groupSearch.length > 0 && (
                   <TouchableOpacity onPress={() => setGroupSearch('')}>
-                    <Ionicons name="close-circle" size={16} color="#adb5bd" />
+                    <Ionicons name="close-circle" size={16} color={t.placeholder} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -251,23 +275,23 @@ export default function ProfileScreen() {
                 return (
                   <TouchableOpacity
                     key={group.id}
-                    style={styles.groupRow}
+                    style={[styles.groupRow, { backgroundColor: t.inputBg }]}
                     onPress={() => group.productId && router.push(`/product/${group.productId}`)}
                     activeOpacity={0.8}
                   >
                     <View style={styles.groupRowTop}>
-                      <Text style={styles.groupName} numberOfLines={1}>{group.name}</Text>
+                      <Text style={[styles.groupName, { color: t.text }]} numberOfLines={1}>{group.name}</Text>
                       <View style={[styles.badge, { backgroundColor: group.isCompleted ? '#ebfbee' : '#e7f5ff' }]}>
                         <Text style={[styles.badgeText, { color: group.isCompleted ? '#2f9e44' : '#228be6' }]}>
                           {group.isCompleted ? 'Completed' : 'Active'}
                         </Text>
                       </View>
                     </View>
-                    <View style={styles.progressBg}>
+                    <View style={[styles.progressBg, { backgroundColor: isDark ? '#33363f' : '#e9ecef' }]}>
                       <View style={[styles.progressFill, { width: `${pct}%` as any, backgroundColor: group.isCompleted ? '#20c997' : '#228be6' }]} />
                     </View>
                     <View style={styles.groupRowBottom}>
-                      <Text style={styles.groupMeta}>{group.currentParticipants}/{group.minParticipants} members</Text>
+                      <Text style={[styles.groupMeta, { color: t.subtext }]}>{group.currentParticipants}/{group.minParticipants} members</Text>
                       <Text style={[styles.groupPct, { color: group.isCompleted ? '#20c997' : '#228be6' }]}>{pct}%</Text>
                     </View>
                   </TouchableOpacity>
@@ -279,10 +303,10 @@ export default function ProfileScreen() {
       </View>
 
       {/* ── Recent Orders (collapsible) ── */}
-      <View style={styles.section}>
+      <View style={[styles.section, { backgroundColor: t.card }]}>
         <TouchableOpacity style={styles.sectionHeader} onPress={() => setOrdersOpen(o => !o)} activeOpacity={0.7}>
-          <Text style={styles.sectionTitle}>Recent Orders</Text>
-          <Ionicons name={ordersOpen ? 'chevron-up' : 'chevron-down'} size={20} color="#868e96" />
+          <Text style={[styles.sectionTitle, { color: t.text }]}>Recent Orders</Text>
+          <Ionicons name={ordersOpen ? 'chevron-up' : 'chevron-down'} size={20} color={t.subtext} />
         </TouchableOpacity>
 
         {ordersOpen && (
@@ -292,18 +316,18 @@ export default function ProfileScreen() {
             </View>
           ) : (
             <View style={styles.sectionBody}>
-              <View style={styles.searchBox}>
-                <Ionicons name="search" size={15} color="#adb5bd" />
+              <View style={[styles.searchBox, { backgroundColor: t.inputBg, borderColor: t.inputBorder }]}>
+                <Ionicons name="search" size={15} color={t.placeholder} />
                 <TextInput
-                  style={styles.searchInput}
+                  style={[styles.searchInput, { color: t.text }]}
                   placeholder="Search orders..."
-                  placeholderTextColor="#adb5bd"
+                  placeholderTextColor={t.placeholder}
                   value={orderSearch}
                   onChangeText={setOrderSearch}
                 />
                 {orderSearch.length > 0 && (
                   <TouchableOpacity onPress={() => setOrderSearch('')}>
-                    <Ionicons name="close-circle" size={16} color="#adb5bd" />
+                    <Ionicons name="close-circle" size={16} color={t.placeholder} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -315,10 +339,10 @@ export default function ProfileScreen() {
                   : '—';
                 const sc = STATUS_COLORS[order.status] ?? { bg: '#f1f3f5', color: '#868e96' };
                 return (
-                  <View key={order.id} style={styles.orderRow}>
+                  <View key={order.id} style={[styles.orderRow, { borderBottomColor: t.border }]}>
                     <View style={styles.orderInfo}>
-                      <Text style={styles.orderName} numberOfLines={1}>{productNames}</Text>
-                      <Text style={styles.orderDate}>
+                      <Text style={[styles.orderName, { color: t.text }]} numberOfLines={1}>{productNames}</Text>
+                      <Text style={[styles.orderDate, { color: t.subtext }]}>
                         {new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                       </Text>
                     </View>
@@ -333,6 +357,15 @@ export default function ProfileScreen() {
           )
         )}
       </View>
+
+      {/* ── Dark Mode Toggle ── */}
+      <TouchableOpacity style={[styles.themeToggleBtn, { backgroundColor: t.card }]} onPress={toggleTheme}>
+        <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={20} color={isDark ? '#f59f00' : '#228be6'} />
+        <Text style={[styles.themeToggleText, { color: t.text }]}>{isDark ? 'Light Mode' : 'Dark Mode'}</Text>
+        <View style={[styles.themeToggleSwitch, { backgroundColor: isDark ? '#228be6' : t.border }]}>
+          <View style={[styles.themeToggleKnob, { left: isDark ? 18 : 2 }]} />
+        </View>
+      </TouchableOpacity>
 
       {/* ── Logout ── */}
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
@@ -350,12 +383,13 @@ const styles = StyleSheet.create({
 
   // Profile card
   card: { backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 24, elevation: 4, marginBottom: 16 },
-  cover: { height: 120 },
-  header: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 20, paddingBottom: 20, marginTop: -50, gap: 14 },
-  avatarWrap: { width: 90, height: 90, borderRadius: 45, borderWidth: 4, borderColor: '#fff', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 5 },
+  cover: { height: 140 },
+  coverOverlay: { position: 'absolute', inset: 0, borderRadius: 999, width: '40%', height: '140%', top: '-20%', left: '-5%', backgroundColor: 'rgba(255,255,255,0.08)' },
+  header: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 20, paddingBottom: 20, marginTop: -60, gap: 16 },
+  avatarWrap: { width: 110, height: 110, borderRadius: 55, borderWidth: 5, borderColor: '#fff', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 5 },
   avatarImg: { width: '100%', height: '100%' },
   avatarFallback: { width: '100%', height: '100%', backgroundColor: '#228be6', justifyContent: 'center', alignItems: 'center' },
-  avatarInitials: { fontSize: 28, fontWeight: '900', color: '#fff' },
+  avatarInitials: { fontSize: 32, fontWeight: '900', color: '#fff' },
   userInfo: { flex: 1, paddingBottom: 4 },
   userName:  { fontSize: 20, fontWeight: '900', color: '#1a1a1a', marginBottom: 3 },
   userEmail: { fontSize: 13, color: '#868e96' },
@@ -373,6 +407,8 @@ const styles = StyleSheet.create({
   fieldGroup: { gap: 6 },
   fieldLabel: { fontSize: 11, fontWeight: '800', color: '#868e96', textTransform: 'uppercase', letterSpacing: 0.5 },
   fieldInput: { borderWidth: 1.5, borderColor: '#dee2e6', borderRadius: 10, padding: 12, fontSize: 15, color: '#111' },
+  resetPicBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8, borderWidth: 1.5, borderColor: '#d0ebff', backgroundColor: '#e7f5ff', alignSelf: 'flex-start' },
+  resetPicText: { fontSize: 13, fontWeight: '700', color: '#228be6' },
   saveBtn:    { backgroundColor: '#228be6', borderRadius: 10, padding: 14, alignItems: 'center', marginTop: 4 },
   saveBtnText:{ color: '#fff', fontWeight: '800', fontSize: 15 },
 
@@ -411,6 +447,10 @@ const styles = StyleSheet.create({
   emptyBtn:     { backgroundColor: '#228be6', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
   emptyBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 
+  themeToggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 16, padding: 18, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  themeToggleText: { flex: 1, fontSize: 15, fontWeight: '700' },
+  themeToggleSwitch: { width: 40, height: 24, borderRadius: 12, justifyContent: 'center' },
+  themeToggleKnob: { position: 'absolute', width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2, elevation: 2 },
   logoutBtn:  { borderRadius: 12, borderWidth: 1.5, borderColor: '#fa5252', paddingVertical: 16, alignItems: 'center', marginTop: 4 },
   logoutText: { color: '#fa5252', fontWeight: '800', fontSize: 15 },
 

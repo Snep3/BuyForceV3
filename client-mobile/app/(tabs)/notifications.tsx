@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../../store/useStore';
 import { API_BASE_URL } from '../../src/config/api';
+import { getTheme } from '../../src/theme';
 
 interface NotificationItem {
   id: string;
@@ -27,7 +28,8 @@ export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   
-  const { token } = useStore();
+  const { token, isDark } = useStore();
+  const t = getTheme(isDark);
 
   useEffect(() => {
     if (token) {
@@ -102,6 +104,13 @@ export default function NotificationsScreen() {
     );
   };
 
+  const TYPE_LABELS: Record<string, string> = {
+    GROUP_JOIN:      'Joined Group',
+    GROUP_COMPLETED: 'Group Completed',
+    GROUP_THRESHOLD: 'Almost There',
+    GROUP_LEAVE:     'Left Group',
+  };
+
   const getIconName = (type: string) => {
     switch (type) {
       case 'GROUP_JOIN': return 'person-add-outline';
@@ -114,7 +123,7 @@ export default function NotificationsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, { backgroundColor: t.bg }]}>
         <ActivityIndicator size="large" color="#228be6" />
       </View>
     );
@@ -133,9 +142,9 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Notifications</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]}>
+      <View style={[styles.header, { backgroundColor: t.bg }]}>
+        <Text style={[styles.headerTitle, { color: t.text }]}>Notifications</Text>
       </View>
 
       <FlatList
@@ -144,7 +153,7 @@ export default function NotificationsScreen() {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
-          <View style={[styles.notifCard, !item.isRead && styles.unreadCard]}>
+          <View style={[styles.notifCard, { backgroundColor: t.card, borderBottomColor: t.border }, !item.isRead && { backgroundColor: t.unreadCard }]}>
             <TouchableOpacity 
               style={styles.contentTouchable} 
               onPress={() => !item.isRead && handleMarkAsRead(item.id)}
@@ -157,13 +166,13 @@ export default function NotificationsScreen() {
                 />
               </View>
               <View style={styles.textContainer}>
-                <Text style={[styles.notifType, !item.isRead && styles.unreadText]}>
-                  {item.type.replace(/_/g, ' ')}
+                <Text style={[styles.notifType, { color: t.subtext }, !item.isRead && styles.unreadText]}>
+                  {TYPE_LABELS[item.type] ?? item.type.replace(/_/g, ' ')}
                 </Text>
-                <Text style={styles.notifMessage} numberOfLines={2}>
+                <Text style={[styles.notifMessage, { color: t.text }]} numberOfLines={2}>
                   {item.message}
                 </Text>
-                <Text style={styles.notifDate}>
+                <Text style={[styles.notifDate, { color: t.subtext }]}>
                   {new Date(item.createdAt).toLocaleDateString()}
                 </Text>
               </View>

@@ -7,13 +7,15 @@ import ProductCard from '../../components/ProductCard';
 import { useStore } from '../../store/useStore';
 import { API_BASE_URL } from '../../src/config/api';
 import { mapProductToCard } from '../../src/utils/mapProduct';
+import { getTheme } from '../../src/theme';
 
 export default function WishlistScreen() {
   const router = useRouter();
   const [wishlistItems, setWishlistItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  const { token, fetchWishlist } = useStore();
+  const { token, fetchWishlist, isDark } = useStore();
+  const t = getTheme(isDark);
 
   // שימוש ב-useFocusEffect מבטיח שהרשימה תתעדכן בכל פעם שהמשתמש עובר לטאב הזה
   useFocusEffect(
@@ -64,7 +66,7 @@ export default function WishlistScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, { backgroundColor: t.bg }]}>
         <ActivityIndicator size="large" color="#228be6" />
       </View>
     );
@@ -83,9 +85,9 @@ export default function WishlistScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Wishlist</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]}>
+      <View style={[styles.header, { backgroundColor: t.bg, borderBottomColor: t.border }]}>
+        <Text style={[styles.headerTitle, { color: t.text }]}>My Wishlist</Text>
       </View>
 
       <FlatList
@@ -97,7 +99,7 @@ export default function WishlistScreen() {
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <View style={styles.cardContainer}>
-             <ProductCard {...mapProductToCard(item)} />
+             <ProductCard {...mapProductToCard(item)} showGroupInfo={false} />
           </View>
         )}
         ListEmptyComponent={

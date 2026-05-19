@@ -138,11 +138,30 @@ export class OrdersService {
 
   // לוגיקת "ההזמנות שלי"
   private async getUserOrdersInternal(userId: string): Promise<Order[]> {
-    return this.orderRepo.find({
+    const orders = await this.orderRepo.find({
       where: { userId },
       relations: ['items', 'items.product', 'group'],
       order: { createdAt: 'DESC' },
     });
+
+    const now = new Date();
+    const toCancel = orders.filter(o =>
+      o.status === 'pending' && (
+        !o.group ||
+        !o.group.isActive ||
+        (o.group.deadline && now > new Date(o.group.deadline))
+      )
+    );
+
+    if (toCancel.length > 0) {
+      await this.orderRepo.update(
+        { id: In(toCancel.map(o => o.id)) },
+        { status: 'cancelled' },
+      );
+      toCancel.forEach(o => { o.status = 'cancelled'; });
+    }
+
+    return orders;
   }
 
   async getOrdersForUser(userId: string): Promise<Order[]> {
