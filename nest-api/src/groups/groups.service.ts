@@ -384,9 +384,10 @@ async getGroupById(id: string) {
     if (!product) throw new BadRequestException('Product not found');
 
     const existing = await this.groupRepo.findOne({
-      where: { productId: dto.productId, isActive: true },
+      where: { productId: dto.productId, isActive: true, isCompleted: false },
     });
-    if (existing) throw new BadRequestException('An active group already exists for this product');
+    const isExistingExpired = existing?.deadline && new Date() > new Date(existing.deadline);
+    if (existing && !isExistingExpired) throw new BadRequestException('An active group already exists for this product');
 
     const group = this.groupRepo.create({
       name: dto.name,

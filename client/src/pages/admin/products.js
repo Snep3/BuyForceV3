@@ -24,6 +24,7 @@ export default function AdminProductsPage() {
   const [saving, setSaving] = useState(false);
   const [imgPreviewError, setImgPreviewError] = useState("");
   const [copiedId, setCopiedId] = useState(null);
+  const [search, setSearch] = useState("");
 
   function copyId(id) {
     navigator.clipboard.writeText(id);
@@ -133,6 +134,15 @@ export default function AdminProductsPage() {
 
   const previewUrl = form.imageUrl ? normalizeImageUrl(form.imageUrl) : "";
 
+  const sq = search.toLowerCase();
+  const filtered = sq
+    ? items.filter((p) =>
+        p.name?.toLowerCase().includes(sq) ||
+        p.category?.toLowerCase().includes(sq) ||
+        p.description?.toLowerCase().includes(sq)
+      )
+    : items;
+
   return (
     <>
       <style>{`
@@ -192,11 +202,25 @@ export default function AdminProductsPage() {
 
               {/* Product Database Table */}
               <section style={{ background: "#1a1b1e", borderRadius: "12px", border: "1px solid #2c2e33", overflow: "hidden" }}>
-                <div style={{ padding: "16px 20px", borderBottom: "1px solid #2c2e33", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ padding: "16px 20px", borderBottom: "1px solid #2c2e33", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                   <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: "800", color: "#fff", textTransform: "uppercase", letterSpacing: "1px" }}>Product Database</h2>
-                  <button onClick={startCreate} style={{ background: "#228be6", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", fontWeight: "700", fontSize: "0.85rem", cursor: "pointer" }}>
-                    + New Product
-                  </button>
+                  <div style={{ display: "flex", gap: "10px", alignItems: "center", marginLeft: "auto" }}>
+                    <div style={{ position: "relative" }}>
+                      <svg style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#909296" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                      <input
+                        type="text"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search products..."
+                        style={{ padding: "7px 12px 7px 32px", background: "#25262b", border: "1px solid #2c2e33", borderRadius: "8px", color: "#c1c2c5", fontSize: "0.85rem", outline: "none", width: "220px" }}
+                        onFocus={(e) => (e.target.style.borderColor = "#228be6")}
+                        onBlur={(e) => (e.target.style.borderColor = "#2c2e33")}
+                      />
+                    </div>
+                    <button onClick={startCreate} style={{ background: "#228be6", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", fontWeight: "700", fontSize: "0.85rem", cursor: "pointer", whiteSpace: "nowrap" }}>
+                      + New Product
+                    </button>
+                  </div>
                 </div>
 
                 {items.length === 0 ? (
@@ -212,7 +236,10 @@ export default function AdminProductsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {items.map((p) => (
+                        {filtered.length === 0 ? (
+                          <tr><td colSpan={8} style={{ textAlign: "center", padding: "40px", color: "#909296" }}>No products match your search.</td></tr>
+                        ) : null}
+                        {filtered.map((p) => (
                           <tr key={p.id} className="db-row" style={{ borderBottom: "1px solid #25262b", background: editingId === p.id ? "#1e2a38" : "transparent" }}>
                             <td style={{ padding: "10px 16px" }}>
                               <div style={{ width: 40, height: 40, background: "#25262b", borderRadius: "6px", overflow: "hidden", display: "grid", placeItems: "center" }}>
