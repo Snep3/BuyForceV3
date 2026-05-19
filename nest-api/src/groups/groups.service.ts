@@ -304,12 +304,9 @@ async joinGroupWithPayment(userId: string, groupId: string) {
       where: { productId, isActive: true, isCompleted: false },
       relations: ['members', 'product'],
     });
-    
-    if (group && group.deadline && new Date() > new Date(group.deadline)) {
-      return null;
-    }
-    
+
     if (!group) return null;
+    if (group.deadline && new Date() > new Date(group.deadline)) return null;
 
     const membersCount = await this.groupMemberRepo.count({
       where: { groupId: group.id },
@@ -317,23 +314,29 @@ async joinGroupWithPayment(userId: string, groupId: string) {
 
     const progress =
       group.minParticipants > 0
-        ? Math.min(
-            100,
-            Math.round((membersCount / group.minParticipants) * 100),
-          )
+        ? Math.min(100, Math.round((membersCount / group.minParticipants) * 100))
         : 0;
+
+    const discountPercent = Number(group.discountPercent ?? 0);
+    const originalPrice = group.product?.price != null ? Number(group.product.price) : null;
+    const discountedPrice =
+      originalPrice != null && discountPercent > 0
+        ? Math.round(originalPrice * (1 - discountPercent / 100) * 100) / 100
+        : originalPrice;
 
     return {
       id: group.id,
       name: group.name,
-      description: group.product?.description,
+      description: group.description,
       minParticipants: group.minParticipants,
       isActive: group.isActive,
-      deadline: group.deadline, 
+      deadline: group.deadline,
       productId: group.productId,
       product: group.product,
       currentParticipants: membersCount,
       progress,
+      discountPercent,
+      discountedPrice,
     };
   }
   // src/groups/groups.service.ts
@@ -376,6 +379,11 @@ async getGroupById(id: string) {
       throw new BadRequestException('Invalid product ID format');
     }
     if (!product) throw new BadRequestException('Product not found');
+
+    const existing = await this.groupRepo.findOne({
+      where: { productId: dto.productId, isActive: true },
+    });
+    if (existing) throw new BadRequestException('An active group already exists for this product');
 
     const group = this.groupRepo.create({
       name: dto.name,

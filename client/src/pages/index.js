@@ -45,9 +45,7 @@ export default function HomePage() {
       setWishlistIds(favIds);
     }
 
-    const activeGroups = resGroups.data.filter(
-      (g) => g.isActive && (!g.deadline || new Date(g.deadline) > new Date())
-    );
+    const activeGroups = resGroups.data.filter((g) => g.isActive);
     setGroups(activeGroups);
   }
 
@@ -206,9 +204,11 @@ export default function HomePage() {
               const prodId = group.product?.id || group.productId;
               const imageUrl = group.product?.imageUrl || "https://via.placeholder.com/400x250?text=No+Image";
               const progress = group.progress ?? 0;
+              const isExpired = group.deadline && new Date(group.deadline) <= new Date();
+              const goalReached = progress >= 100;
 
               return (
-                <div key={group.id} style={cardStyle}>
+                <div key={group.id} style={{ ...cardStyle, opacity: isExpired ? 0.6 : 1 }}>
                   {/* Image */}
                   <div style={imgWrapStyle}>
                     <img src={imageUrl} alt={group.name} style={imgStyle} />
@@ -219,7 +219,10 @@ export default function HomePage() {
                     >
                       {isLiked ? "♥" : "♡"}
                     </button>
-                    <span style={activeBadgeStyle}>Active</span>
+                    {isExpired
+                      ? <span style={expiredBadgeStyle}>Expired</span>
+                      : <span style={activeBadgeStyle}>Active</span>
+                    }
                     {isJoined && <span style={joinedBadgeStyle}>Joined</span>}
                   </div>
 
@@ -253,17 +256,25 @@ export default function HomePage() {
                       <p style={cardDescStyle}>{group.description}</p>
                     )}
 
-                    {/* Progress */}
+                    {/* Progress or Goal Reached */}
                     <div style={{ marginTop: "auto" }}>
-                      <div style={progressLabelStyle}>
-                        <span style={{ color: "#495057" }}>
-                          {group.currentParticipants} / {group.minParticipants} members
-                        </span>
-                        <span style={{ color: "#228be6", fontWeight: "700" }}>{progress}%</span>
-                      </div>
-                      <div style={progressBgStyle}>
-                        <div style={{ ...progressFillStyle, width: `${Math.min(progress, 100)}%` }} />
-                      </div>
+                      {goalReached ? (
+                        <div style={goalReachedStyle}>
+                          🎉 Goal Reached! {group.currentParticipants} members joined
+                        </div>
+                      ) : (
+                        <>
+                          <div style={progressLabelStyle}>
+                            <span style={{ color: "#495057" }}>
+                              {group.currentParticipants} / {group.minParticipants} members
+                            </span>
+                            <span style={{ color: "#228be6", fontWeight: "700" }}>{progress}%</span>
+                          </div>
+                          <div style={progressBgStyle}>
+                            <div style={{ ...progressFillStyle, width: `${Math.min(progress, 100)}%` }} />
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     <div style={timerStyle}>
@@ -271,7 +282,11 @@ export default function HomePage() {
                       <CountdownTimer deadline={group.deadline} />
                     </div>
 
-                    {isJoined ? (
+                    {isExpired ? (
+                      <button disabled style={{ ...joinBtn, background: "#adb5bd", cursor: "not-allowed" }}>
+                        Deal Ended
+                      </button>
+                    ) : isJoined ? (
                       <button onClick={() => handleLeave(group.id)} style={leaveBtn}>
                         Leave Group
                       </button>
@@ -385,6 +400,27 @@ const activeBadgeStyle = {
   borderRadius: "20px",
   fontSize: "0.75rem",
   fontWeight: "700",
+};
+const expiredBadgeStyle = {
+  position: "absolute",
+  top: "12px",
+  right: "12px",
+  background: "#868e96",
+  color: "#fff",
+  padding: "3px 10px",
+  borderRadius: "20px",
+  fontSize: "0.75rem",
+  fontWeight: "700",
+};
+const goalReachedStyle = {
+  background: "#ebfbee",
+  color: "#2f9e44",
+  border: "1px solid #b2f2bb",
+  borderRadius: "10px",
+  padding: "10px 14px",
+  fontWeight: "700",
+  fontSize: "0.9rem",
+  textAlign: "center",
 };
 const joinedBadgeStyle = {
   position: "absolute",
