@@ -15,11 +15,15 @@ import { API_BASE_URL } from '../../src/config/api';
 import ProductCard from '../../components/ProductCard';
 import { mapProductToCard } from '../../src/utils/mapProduct';
 import type { ApiProduct } from '../../src/types/product';
+import { useStore } from '../../store/useStore';
+import { getTheme } from '../../src/theme';
 
 export default function ProductsScreen() {
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const isDark = useStore(s => s.isDark);
+  const t = getTheme(isDark);
 
   useEffect(() => {
     void fetchProducts();
@@ -47,11 +51,11 @@ export default function ProductsScreen() {
   }, [products, search]);
 
   if (loading) {
-    return <ActivityIndicator style={{ flex: 1 }} size="large" color="#228be6" />;
+    return <View style={{ flex: 1, backgroundColor: t.bg, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color="#228be6" /></View>;
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: t.bg }]}>
       <StatusBar barStyle="light-content" />
 
       <LinearGradient
@@ -65,15 +69,15 @@ export default function ProductsScreen() {
           Discover products available for group buying
         </Text>
 
-        <View style={styles.searchBox}>
+        <View style={[styles.searchBox, { backgroundColor: t.searchBg }]}>
           <Ionicons name="search" size={16} color="#868e96" />
           <TextInput
             placeholder="Search products or categories..."
-            placeholderTextColor="#adb5bd"
+            placeholderTextColor={t.placeholder}
             value={search}
             onChangeText={setSearch}
             onSubmitEditing={() => Keyboard.dismiss()}
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: t.text }]}
             returnKeyType="search"
           />
         </View>
@@ -88,7 +92,7 @@ export default function ProductsScreen() {
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => <ProductCard {...mapProductToCard(item)} />}
         ListHeaderComponent={
-          <Text style={styles.sectionLabel}>
+          <Text style={[styles.sectionLabel, { color: t.subtext }]}>
             {filtered.length} product{filtered.length !== 1 ? 's' : ''} found
           </Text>
         }

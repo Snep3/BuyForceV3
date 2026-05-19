@@ -402,7 +402,15 @@ async getGroupById(id: string) {
     if (dto.description !== undefined) group.description = dto.description;
     if (dto.minParticipants !== undefined)
       group.minParticipants = dto.minParticipants;
-    if (dto.isActive !== undefined) group.isActive = dto.isActive;
+    if (dto.isActive !== undefined) {
+      if (dto.isActive === false && group.isActive !== false) {
+        await this.orderRepo.update(
+          { groupId: group.id, status: 'pending' },
+          { status: 'cancelled' },
+        );
+      }
+      group.isActive = dto.isActive;
+    }
     if (dto.deadline !== undefined) group.deadline = dto.deadline ? new Date(dto.deadline) : null;
     if (dto.discountPercent !== undefined) group.discountPercent = dto.discountPercent;
 
@@ -427,6 +435,11 @@ async getGroupById(id: string) {
   async remove(id: string) {
     const group = await this.groupRepo.findOne({ where: { id } });
     if (!group) throw new NotFoundException('Group not found');
+
+    await this.orderRepo.update(
+      { groupId: group.id, status: 'pending' },
+      { status: 'cancelled' },
+    );
 
     await this.groupRepo.remove(group);
     void this.syncGroupsSeedFile();

@@ -16,6 +16,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { API_BASE_URL } from '../../src/config/api';
 import ProductCard from '../../components/ProductCard';
 import { mapGroupToCard, ApiGroup } from '../../src/utils/mapProduct';
+import { useStore } from '../../store/useStore';
+import { getTheme } from '../../src/theme';
 
 const STORAGE_KEY = '@search_history';
 
@@ -24,6 +26,8 @@ export default function HomeScreen() {
   const [search, setSearch] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const isDark = useStore(s => s.isDark);
+  const t = getTheme(isDark);
 
   useFocusEffect(
     useCallback(() => {
@@ -81,12 +85,12 @@ export default function HomeScreen() {
   }, [groups, search]);
 
   if (loading) {
-    return <ActivityIndicator style={{ flex: 1 }} size="large" color="#228be6" />;
+    return <View style={{ flex: 1, backgroundColor: t.bg, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color="#228be6" /></View>;
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+    <View style={[styles.container, { backgroundColor: t.bg }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       <LinearGradient
         colors={['#0f0c29', '#302b63', '#24243e']}
@@ -99,18 +103,18 @@ export default function HomeScreen() {
           Join a group and save together
         </Text>
 
-        <View style={styles.searchBox}>
+        <View style={[styles.searchBox, { backgroundColor: t.searchBg }]}>
           <Ionicons name="search" size={16} color="#868e96" />
           <TextInput
             placeholder="Search groups or products..."
-            placeholderTextColor="#adb5bd"
+            placeholderTextColor={t.placeholder}
             value={search}
             onChangeText={setSearch}
             onSubmitEditing={() => {
               void saveToHistory(search);
               Keyboard.dismiss();
             }}
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: t.text }]}
             returnKeyType="search"
           />
         </View>
@@ -127,7 +131,7 @@ export default function HomeScreen() {
           <ProductCard {...mapGroupToCard(item)} />
         )}
         ListHeaderComponent={
-          <Text style={styles.sectionLabel}>
+          <Text style={[styles.sectionLabel, { color: t.subtext }]}>
             {search ? `Results for "${search}"` : 'All Deals'} · {filtered.length} available
           </Text>
         }
