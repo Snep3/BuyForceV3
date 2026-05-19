@@ -65,8 +65,14 @@ export default function ProfileScreen() {
         setProfile(u);
         setForm({ fullName: u.fullName || '', phone: u.phone || '', address: u.address || '', avatarUrl: u.avatarUrl || '' });
       }
-      if (groupsRes.ok) setMyGroups(await groupsRes.json());
-      if (ordersRes.ok) setMyOrders(await ordersRes.json());
+      if (groupsRes.ok) {
+        const gData = await groupsRes.json();
+        setMyGroups(Array.from(new Map(gData.map((g: any) => [g.id, g])).values()) as any[]);
+      }
+      if (ordersRes.ok) {
+        const oData = await ordersRes.json();
+        setMyOrders(Array.from(new Map(oData.map((o: any) => [o.id, o])).values()) as any[]);
+      }
     } catch {
       // show whatever we have from store
     } finally {
@@ -166,7 +172,8 @@ export default function ProfileScreen() {
           <View style={styles.coverOverlay} />
         </LinearGradient>
 
-        <View style={styles.header}>
+        {/* Avatar — sits on the banner edge */}
+        <View style={styles.avatarSection}>
           <View style={styles.avatarWrap}>
             {profile?.avatarUrl ? (
               <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImg} />
@@ -176,20 +183,22 @@ export default function ProfileScreen() {
               </View>
             )}
           </View>
-          <View style={styles.userInfo}>
-            <Text style={[styles.userName, { color: t.text }]}>{displayName}</Text>
-            <Text style={[styles.userEmail, { color: t.subtext }]}>{email}{memberYear ? ` · Member since ${memberYear}` : ''}</Text>
-            {profile?.phone   && <Text style={[styles.userMeta, { color: t.text }]}>📞 {profile.phone}</Text>}
-            {profile?.address && <Text style={[styles.userMeta, { color: t.text }]}>📍 {profile.address}</Text>}
-            <TouchableOpacity style={styles.editBtn} onPress={() => setIsEditing(e => !e)}>
-              <Text style={styles.editBtnText}>{isEditing ? 'Cancel' : 'Edit Profile'}</Text>
-            </TouchableOpacity>
-          </View>
         </View>
 
-        <View style={styles.statsRow}>
+        {/* All user info below the avatar */}
+        <View style={styles.userInfo}>
+          <Text style={[styles.userName, { color: t.text }]}>{displayName}</Text>
+          <Text style={[styles.userEmail, { color: t.subtext }]}>{email}{memberYear ? ` · Member since ${memberYear}` : ''}</Text>
+          {profile?.phone   && <Text style={[styles.userMeta, { color: t.subtext }]}>📞 {profile.phone}</Text>}
+          {profile?.address && <Text style={[styles.userMeta, { color: t.subtext }]}>📍 {profile.address}</Text>}
+          <TouchableOpacity style={styles.editBtn} onPress={() => setIsEditing(e => !e)}>
+            <Text style={styles.editBtnText}>{isEditing ? 'Cancel' : 'Edit Profile'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={[styles.statsRow, { borderTopColor: t.border }]}>
           {stats.map((s, i) => (
-            <View key={s.label} style={[styles.statCell, i < 2 && styles.statDivider]}>
+            <View key={s.label} style={[styles.statCell, i < 2 && styles.statDivider, i < 2 && { borderRightColor: t.border }]}>
               <Text style={styles.statValue}>{s.value}</Text>
               <Text style={styles.statLabel}>{s.label}</Text>
             </View>
@@ -396,22 +405,22 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 24, elevation: 4, marginBottom: 16 },
   cover: { height: 140 },
   coverOverlay: { position: 'absolute', inset: 0, borderRadius: 999, width: '40%', height: '140%', top: '-20%', left: '-5%', backgroundColor: 'rgba(255,255,255,0.08)' },
-  header: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 20, paddingBottom: 20, marginTop: -60, gap: 16 },
+  avatarSection: { alignItems: 'center', marginTop: -55, marginBottom: 4 },
   avatarWrap: { width: 110, height: 110, borderRadius: 55, borderWidth: 5, borderColor: '#fff', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 5 },
   avatarImg: { width: '100%', height: '100%' },
   avatarFallback: { width: '100%', height: '100%', backgroundColor: '#228be6', justifyContent: 'center', alignItems: 'center' },
   avatarInitials: { fontSize: 32, fontWeight: '900', color: '#fff' },
-  userInfo: { flex: 1, paddingBottom: 4 },
+  userInfo: { alignItems: 'center', paddingHorizontal: 20, paddingBottom: 16, gap: 4 },
   userName:  { fontSize: 20, fontWeight: '900', color: '#1a1a1a', marginBottom: 3 },
-  userEmail: { fontSize: 13, color: '#868e96' },
-  userMeta:  { fontSize: 13, color: '#495057', marginTop: 4 },
+  userEmail: { fontSize: 13, color: '#868e96', textAlign: 'center' },
+  userMeta:  { fontSize: 13, color: '#495057' },
   statsRow:  { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#f0f0f0' },
   statCell:  { flex: 1, paddingVertical: 18, alignItems: 'center' },
   statDivider: { borderRightWidth: 1, borderRightColor: '#f0f0f0' },
   statValue: { fontSize: 26, fontWeight: '900', color: '#228be6', marginBottom: 4 },
   statLabel: { fontSize: 10, fontWeight: '700', color: '#868e96', textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'center' },
 
-  editBtn:     { marginTop: 10, paddingVertical: 7, paddingHorizontal: 16, borderRadius: 8, borderWidth: 1.5, borderColor: '#dee2e6', alignSelf: 'flex-start' },
+  editBtn:     { marginTop: 6, paddingVertical: 7, paddingHorizontal: 16, borderRadius: 8, borderWidth: 1.5, borderColor: '#dee2e6', alignSelf: 'center' },
   editBtnText: { fontSize: 13, fontWeight: '700', color: '#228be6' },
 
   editForm:   { borderTopWidth: 1, borderTopColor: '#f0f0f0', padding: 20, gap: 14 },
