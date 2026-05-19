@@ -76,6 +76,53 @@ export default function NotificationsScreen() {
     }
   };
 
+  const handleMarkAllAsRead = async () => {
+    const unread = notifications.filter(n => !n.isRead);
+    if (!unread.length) return;
+    try {
+      await Promise.all(
+        unread.map(n =>
+          fetch(`${API_BASE_URL}/api/notifications/${n.id}/read`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+        )
+      );
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    } catch (err) {
+      console.error("Mark all as read error:", err);
+    }
+  };
+
+  const handleDeleteAll = () => {
+    Alert.alert(
+      "Delete All Notifications",
+      "Are you sure you want to remove all notifications?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete All",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await Promise.all(
+                notifications.map(n =>
+                  fetch(`${API_BASE_URL}/api/notifications/${n.id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                  })
+                )
+              );
+              setNotifications([]);
+            } catch (err) {
+              console.error("Delete all error:", err);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const handleDelete = async (id: string) => {
     Alert.alert(
       "Delete Notification",
@@ -145,6 +192,27 @@ export default function NotificationsScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]}>
       <View style={[styles.header, { backgroundColor: t.bg }]}>
         <Text style={[styles.headerTitle, { color: t.text }]}>Notifications</Text>
+        <View style={styles.headerActions}>
+          {(() => {
+            const hasUnread = notifications.some(n => !n.isRead);
+            return (
+              <TouchableOpacity
+                onPress={hasUnread ? handleMarkAllAsRead : undefined}
+                style={[styles.headerBtn, !hasUnread && styles.headerBtnDisabled]}
+                activeOpacity={hasUnread ? 0.7 : 1}
+              >
+                <Ionicons name="checkmark-done-outline" size={16} color={hasUnread ? '#228be6' : '#94a3b8'} />
+                <Text style={[styles.headerBtnText, !hasUnread && styles.headerBtnTextDisabled]}>Mark All</Text>
+              </TouchableOpacity>
+            );
+          })()}
+          {notifications.length > 0 && (
+            <TouchableOpacity onPress={handleDeleteAll} style={styles.headerBtn}>
+              <Ionicons name="trash-outline" size={16} color="#ef4444" />
+              <Text style={[styles.headerBtnText, { color: '#ef4444' }]}>Delete All</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <FlatList
@@ -210,8 +278,13 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  header: { padding: 20, backgroundColor: '#fff' },
+  header: { padding: 20, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#1e293b' },
+  headerActions: { flexDirection: 'row', gap: 12 },
+  headerBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, backgroundColor: '#f1f5f9' },
+  headerBtnDisabled: { opacity: 0.45 },
+  headerBtnText: { fontSize: 13, fontWeight: '600', color: '#228be6' },
+  headerBtnTextDisabled: { color: '#94a3b8' },
   listContent: { paddingBottom: 20, flexGrow: 1 },
   notifCard: { 
     flexDirection: 'row', 

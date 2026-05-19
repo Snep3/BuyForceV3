@@ -64,7 +64,7 @@ export default function ProductCard({
     >
       <View style={[styles.imageContainer, { backgroundColor: isDark ? '#272932' : '#f8f9fa' }]}>
         <Image source={imageSource} style={styles.image} resizeMode="cover" />
-        {endsAt && (
+        {showGroupInfo && endsAt && (
           <View style={styles.timeBadge}>
             <Text style={styles.timeText}>{getTimeLeft(endsAt)}</Text>
           </View>

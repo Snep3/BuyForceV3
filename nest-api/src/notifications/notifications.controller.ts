@@ -14,11 +14,24 @@ export class NotificationsController {
     return this.notificationsService.getMyNotifications(userId);
   }
 
+  @Patch('read-all')
+  async markAllRead(@Req() req: any) {
+    const userId = req?.user?.id || req?.user?.userId;
+    return this.notificationsService.markAllAsRead(userId);
+  }
+
   @Patch(':id/read')
   async markRead(@Param('id') id: string, @Req() req: any) {
     const userId = req?.user?.id || req?.user?.userId;
     return this.notificationsService.markAsRead(id, userId);
   }
+
+  @Delete()
+  async removeAll(@Req() req: any) {
+    const userId = req?.user?.id || req?.user?.userId;
+    return this.notificationsService.removeAll(userId);
+  }
+
   @Delete(':id')
   async remove(@Param('id') id: string) {
     return this.notificationsService.remove(id);
